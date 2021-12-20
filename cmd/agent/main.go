@@ -56,7 +56,11 @@ func (collector *CollectorAgent) Collect(t time.Time) {
 
 func PostOneGaugeStat(server string, metricName string, metricValue float64) {
 	url := fmt.Sprintf("http://%s/update/%s/%s/%f", server, gaugeTypeName, metricName, metricValue)
-	_, _ = http.Post(url, "text/plain", strings.NewReader("body"))
+	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
+	if err != nil {
+		print(err)
+	}
+	defer resp.Body.Close()
 	// fmt.Println(url)
 }
 
