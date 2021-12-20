@@ -62,7 +62,11 @@ func PostOneGaugeStat(server string, metricName string, metricValue float64) {
 
 func PostOneCounterStat(server string, metricName string, metricValue uint64) {
 	url := fmt.Sprintf("http://%s/update/%s/%s/%d", server, counterTypeName, metricName, metricValue)
-	_, _ = http.Post(url, "text/plain", strings.NewReader("body"))
+	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
+	if err != nil {
+		print(err)
+	}
+	defer resp.Body.Close()
 	// fmt.Println(url)
 }
 
