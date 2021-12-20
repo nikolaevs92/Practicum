@@ -56,13 +56,21 @@ func (collector *CollectorAgent) Collect(t time.Time) {
 
 func PostOneGaugeStat(server string, metricName string, metricValue float64) {
 	url := fmt.Sprintf("http://%s/update/%s/%s/%f", server, gaugeTypeName, metricName, metricValue)
-	_, _ = http.Post(url, "text/plain", strings.NewReader("body"))
+	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
+	if err != nil {
+		print(err)
+	}
+	defer resp.Body.Close()
 	// fmt.Println(url)
 }
 
 func PostOneCounterStat(server string, metricName string, metricValue uint64) {
 	url := fmt.Sprintf("http://%s/update/%s/%s/%d", server, counterTypeName, metricName, metricValue)
-	_, _ = http.Post(url, "text/plain", strings.NewReader("body"))
+	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
+	if err != nil {
+		print(err)
+	}
+	defer resp.Body.Close()
 	// fmt.Println(url)
 }
 
@@ -115,10 +123,10 @@ func (collector *CollectorAgent) Run(end context.Context) {
 	}
 }
 
-func main() {
+func RunAgentDefault() {
 	collector := new(CollectorAgent)
 	cancelChan := make(chan os.Signal, 1)
-	signal.Notify(cancelChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	signal.Notify(cancelChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		<-cancelChan
@@ -128,4 +136,8 @@ func main() {
 	collector.Run(ctx)
 
 	fmt.Println("Program end")
+}
+
+func main() {
+	RunAgentDefault()
 }
