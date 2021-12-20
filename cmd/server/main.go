@@ -80,18 +80,18 @@ func MakeHandler(guageChan chan GuageDataUpdate, counterChan chan CounterDataUpd
 	}
 }
 
-type dataServer struct {
+type DataServer struct {
 	dataHolder CollectedData
 	Server     string
 }
 
-func (collector *dataServer) Initite() {
-	if collector.Server == "" {
-		collector.Server = "127.0.0.1:8080"
+func (dataServer *DataServer) Initite() {
+	if dataServer.Server == "" {
+		dataServer.Server = "127.0.0.1:8080"
 	}
 }
 
-func (dataServer dataServer) RunHttpServer(guageChan chan GuageDataUpdate, counterChan chan CounterDataUpdate, end context.Context) {
+func (dataServer DataServer) RunHTTPServer(guageChan chan GuageDataUpdate, counterChan chan CounterDataUpdate, end context.Context) {
 	dataServer.Initite()
 	http.Handle("/update/", MakeHandler(guageChan, counterChan))
 	server := &http.Server{
@@ -105,21 +105,21 @@ func (dataServer dataServer) RunHttpServer(guageChan chan GuageDataUpdate, count
 	server.ListenAndServe()
 }
 
-func (server dataServer) Run(end context.Context) {
+func (dataServer DataServer) Run(end context.Context) {
 	guageChan := make(chan GuageDataUpdate, 1024)
 	counterChan := make(chan CounterDataUpdate, 1024)
 
 	dataHolderEndCtx, dataHolderCancel := context.WithCancel(end)
 	defer dataHolderCancel()
-	go server.dataHolder.RunReciver(guageChan, counterChan, dataHolderEndCtx)
+	go dataServer.dataHolder.RunReciver(guageChan, counterChan, dataHolderEndCtx)
 
 	httpServerEndCtx, httpServerCancel := context.WithCancel(end)
 	defer httpServerCancel()
-	server.RunHttpServer(guageChan, counterChan, httpServerEndCtx)
+	dataServer.RunHTTPServer(guageChan, counterChan, httpServerEndCtx)
 }
 
 func RunServerDefault() {
-	server := new(dataServer)
+	server := new(DataServer)
 	cancelChan := make(chan os.Signal, 1)
 	signal.Notify(cancelChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	ctx, cancel := context.WithCancel(context.Background())
