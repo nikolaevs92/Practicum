@@ -1,4 +1,4 @@
-package main
+package agent
 
 import (
 	"context"
@@ -115,7 +115,7 @@ func (collector *CollectorAgent) Run(end context.Context) {
 	}
 }
 
-func main() {
+func RunAgentDefault() {
 	collector := new(CollectorAgent)
 	cancelChan := make(chan os.Signal, 1)
 	signal.Notify(cancelChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
@@ -128,4 +128,8 @@ func main() {
 	collector.Run(ctx)
 
 	fmt.Println("Program end")
+}
+
+func main() {
+	RunAgentDefault()
 }
