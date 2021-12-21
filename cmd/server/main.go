@@ -53,6 +53,9 @@ func MakeHandler(guageChan chan GuageDataUpdate, counterChan chan CounterDataUpd
 		if len(queryPath) != 3 {
 			w.WriteHeader(http.StatusBadRequest)
 			body = []byte("Wrong request")
+		} else if queryPath[1] == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			body = []byte("Empty metric_id")
 		} else {
 			switch queryPath[0] {
 			case gaugeTypeName:
@@ -60,17 +63,19 @@ func MakeHandler(guageChan chan GuageDataUpdate, counterChan chan CounterDataUpd
 				if err != nil {
 					w.WriteHeader(http.StatusBadRequest)
 					body = []byte("Error on parsing guage: " + err.Error())
+				} else {
+					guageChan <- GuageDataUpdate{queryPath[1], value}
+					w.WriteHeader(http.StatusOK)
 				}
-				guageChan <- GuageDataUpdate{queryPath[1], value}
-				w.WriteHeader(http.StatusOK)
 			case counterTypeName:
 				value, err := strconv.ParseInt(queryPath[2], 10, 64)
 				if err != nil {
 					w.WriteHeader(http.StatusBadRequest)
 					body = []byte("Error on parsing counter: " + err.Error())
+				} else {
+					counterChan <- CounterDataUpdate{queryPath[1], value}
+					w.WriteHeader(http.StatusOK)
 				}
-				counterChan <- CounterDataUpdate{queryPath[1], value}
-				w.WriteHeader(http.StatusOK)
 			default:
 				w.WriteHeader(http.StatusBadRequest)
 				body = []byte("Unsupported type: " + queryPath[0])
