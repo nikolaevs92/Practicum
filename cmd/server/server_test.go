@@ -87,7 +87,7 @@ func TestStatHandler(t *testing.T) {
 		t.Run(tt.testName, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, tt.urlPath, nil)
 			w := httptest.NewRecorder()
-			guageChan := make(chan server.GuageDataUpdate, 1024)
+			guageChan := make(chan server.GaugeDataUpdate, 1024)
 			counterChan := make(chan server.CounterDataUpdate, 1024)
 			// h := http.HandlerFunc(UserViewHandler(tt.users))
 			h := server.MakeHandler(guageChan, counterChan, "/")
