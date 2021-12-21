@@ -20,22 +20,22 @@ func TestStatHandler(t *testing.T) {
 		{
 			testName:   "empty_update",
 			urlPath:    "/",
-			statusCode: 400,
+			statusCode: 404,
 		},
 		{
 			testName:   "wrong_path_len",
 			urlPath:    "/asdd/",
-			statusCode: 400,
+			statusCode: 404,
 		},
 		{
 			testName:   "wrong_path_len",
 			urlPath:    "/asd/asdasd//asd",
-			statusCode: 400,
+			statusCode: 404,
 		},
 		{
 			testName:   "wrong_type",
 			urlPath:    "/guaaage/fds/235",
-			statusCode: 400,
+			statusCode: 501,
 		},
 		{
 			testName:   "empty_metric_name",

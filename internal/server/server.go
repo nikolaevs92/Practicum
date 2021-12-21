@@ -56,7 +56,7 @@ func MakeHandler(guageChan chan GaugeDataUpdate, counterChan chan CounterDataUpd
 		queryPath := strings.Split(strings.TrimPrefix(req.URL.Path, entryPath), "/")
 
 		if len(queryPath) != 3 {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusNotFound)
 			body = []byte("Wrong request")
 		} else if queryPath[1] == "" {
 			w.WriteHeader(http.StatusBadRequest)
@@ -82,7 +82,7 @@ func MakeHandler(guageChan chan GaugeDataUpdate, counterChan chan CounterDataUpd
 					w.WriteHeader(http.StatusOK)
 				}
 			default:
-				w.WriteHeader(http.StatusBadRequest)
+				w.WriteHeader(http.StatusNotImplemented)
 				body = []byte("Unsupported type: " + queryPath[0])
 			}
 		}
