@@ -1,4 +1,4 @@
-module github.com/nikolaevs92/Practicum.git
+module github.com/nikolaevs92/Practicum
 
 go 1.17
 

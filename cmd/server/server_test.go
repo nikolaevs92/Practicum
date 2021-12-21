@@ -6,6 +6,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/nikolaevs92/Practicum/internal/server"
 )
 
 func TestStatHandler(t *testing.T) {
@@ -84,16 +87,18 @@ func TestStatHandler(t *testing.T) {
 		t.Run(tt.testName, func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, tt.urlPath, nil)
 			w := httptest.NewRecorder()
-			guageChan := make(chan GuageDataUpdate, 1024)
-			counterChan := make(chan CounterDataUpdate, 1024)
+			guageChan := make(chan server.GuageDataUpdate, 1024)
+			counterChan := make(chan server.CounterDataUpdate, 1024)
 			// h := http.HandlerFunc(UserViewHandler(tt.users))
-			h := MakeHandler(guageChan, counterChan)
+			h := server.MakeHandler(guageChan, counterChan, "/")
 			h.ServeHTTP(w, request)
 			result := w.Result()
 
 			assert.Equal(t, tt.statusCode, result.StatusCode)
 			assert.Equal(t, "text/plain", result.Header.Get("Content-Type"))
 
+			err := result.Body.Close()
+			require.NoError(t, err)
 		})
 	}
 }
