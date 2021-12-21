@@ -3,17 +3,15 @@ package server
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"syscall"
-)
 
-const (
-	gaugeTypeName   string = "gauge"
-	counterTypeName string = "counter"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type GaugeDataUpdate struct {
@@ -49,50 +47,104 @@ func (data *CollectedData) RunReciver(guageChan chan GaugeDataUpdate, counterCha
 	}
 }
 
-func MakeHandler(guageChan chan GaugeDataUpdate, counterChan chan CounterDataUpdate, entryPath string) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("content-type", "text/plain")
-		body := []byte("data is recieved")
-		queryPath := strings.Split(strings.TrimPrefix(req.URL.Path, entryPath), "/")
+func MakeHandleGaugeUpdate(guageChan chan GaugeDataUpdate) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Set("content-type", "text/plain; charset=utf-8")
+		metricName := chi.URLParam(req, "metricName")
+		metricValue := chi.URLParam(req, "metricValue")
 
-		if len(queryPath) != 3 {
-			w.WriteHeader(http.StatusNotFound)
-			body = []byte("Wrong request")
-		} else if queryPath[1] == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			body = []byte("Empty metric_id")
-		} else {
-			switch queryPath[0] {
-			case gaugeTypeName:
-				value, err := strconv.ParseFloat(queryPath[2], 64)
-				if err != nil {
-					w.WriteHeader(http.StatusBadRequest)
-					body = []byte("Error on parsing guage: " + err.Error())
-				} else {
-					guageChan <- GaugeDataUpdate{queryPath[1], value}
-					w.WriteHeader(http.StatusOK)
-				}
-			case counterTypeName:
-				value, err := strconv.ParseInt(queryPath[2], 10, 64)
-				if err != nil {
-					w.WriteHeader(http.StatusBadRequest)
-					body = []byte("Error on parsing counter: " + err.Error())
-				} else {
-					counterChan <- CounterDataUpdate{queryPath[1], value}
-					w.WriteHeader(http.StatusOK)
-				}
-			default:
-				w.WriteHeader(http.StatusNotImplemented)
-				body = []byte("Unsupported type: " + queryPath[0])
-			}
+		if metricName == "" {
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte("Empty metric_id"))
+			return
 		}
-		w.Write(body)
+		body := []byte("data is recieved")
+		value, err := strconv.ParseFloat(metricValue, 64)
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte("Error on parsing guage: " + err.Error()))
+			return
+		}
+		guageChan <- GaugeDataUpdate{metricName, value}
+
+		rw.WriteHeader(http.StatusOK)
+		rw.Write(body)
 	}
+}
+
+func MakeHandleCounterUpdate(counterChan chan CounterDataUpdate) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Set("content-type", "text/plain; charset=utf-8")
+		metricName := chi.URLParam(req, "metricName")
+		metricValue := chi.URLParam(req, "metricValue")
+
+		if metricName == "" {
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte("Empty metric_id"))
+			return
+		}
+
+		if metricName == "" {
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte("Empty metric_id"))
+			return
+		}
+		body := []byte("data is recieved")
+		value, err := strconv.ParseInt(metricValue, 10, 64)
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte("Error on parsing counter: " + err.Error()))
+			return
+		}
+		counterChan <- CounterDataUpdate{metricName, value}
+
+		rw.WriteHeader(http.StatusOK)
+		rw.Write(body)
+	}
+}
+
+func MakeRouter(guageChan chan GaugeDataUpdate, counterChan chan CounterDataUpdate) chi.Router {
+	r := chi.NewRouter()
+
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	// r.Post("/", func(rw http.ResponseWriter, r *http.Request) {
+	// 	rw.Header().Set("content-type", "text/plain")
+	// 	rw.WriteHeader(http.StatusNotFound)
+	// 	rw.Write(nil)
+	// })
+	r.Route("/update", func(r chi.Router) {
+		r.Post("/gauge/{metricName}/{metricValue}", MakeHandleGaugeUpdate(guageChan))
+		r.Post("/counter/{metricName}/{metricValue}", MakeHandleCounterUpdate(counterChan))
+
+		r.Post("/gauge/{metricName}", func(rw http.ResponseWriter, r *http.Request) {
+			rw.Header().Set("content-type", "text/plain; charset=utf-8")
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write(nil)
+		})
+		r.Post("/counter/{metricName}", func(rw http.ResponseWriter, r *http.Request) {
+			rw.Header().Set("content-type", "text/plain; charset=utf-8")
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write(nil)
+		})
+
+		r.Post("/{metricType}/{metricName}/{metricValue}", func(rw http.ResponseWriter, r *http.Request) {
+			rw.Header().Set("content-type", "text/plain; charset=utf-8")
+			rw.WriteHeader(http.StatusNotImplemented)
+			rw.Write(nil)
+		})
+	})
+
+	return r
 }
 
 type DataServer struct {
 	DataHolder CollectedData
 	Server     string
+	Port       string
 }
 
 func (dataServer *DataServer) Initite() {
@@ -104,16 +156,18 @@ func (dataServer *DataServer) Initite() {
 
 func (dataServer *DataServer) RunHTTPServer(guageChan chan GaugeDataUpdate, counterChan chan CounterDataUpdate, end context.Context) {
 	dataServer.Initite()
-	http.Handle("/update/", MakeHandler(guageChan, counterChan, "/update/"))
+	r := MakeRouter(guageChan, counterChan)
+
 	server := &http.Server{
-		Addr: dataServer.Server,
+		Addr:    dataServer.Server,
+		Handler: r,
 	}
 	go func() {
 		<-end.Done()
 		fmt.Println("Shutting down the HTTP server...")
 		server.Shutdown(end)
 	}()
-	server.ListenAndServe()
+	log.Fatal(server.ListenAndServe())
 }
 
 func (dataServer *DataServer) Run(end context.Context) {
