@@ -95,6 +95,7 @@ func TestStatHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
 			resp, body := testRequest(t, ts, "POST", tt.urlPath)
+			defer resp.Body.Close()
 
 			if !assert.Equal(t, tt.statusCode, resp.StatusCode) {
 				fmt.Println(body)
@@ -113,8 +114,6 @@ func testRequest(t *testing.T, ts *httptest.Server, method string, path string) 
 
 	respBody, err := ioutil.ReadAll(resp.Body)
 	require.NoError(t, err)
-
-	defer resp.Body.Close()
 
 	return resp, string(respBody)
 }
