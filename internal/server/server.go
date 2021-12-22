@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -24,6 +25,30 @@ type CounterDataUpdate struct {
 	Value int64
 }
 
+type GasugeDataResponce struct {
+	Value   float64
+	Success bool
+}
+
+type CounterDataResponce struct {
+	Value   int64
+	Success bool
+}
+
+type GaugeDataRequest struct {
+	Name     string
+	Responce chan GasugeDataResponce
+}
+
+type CounterDataRequest struct {
+	Name     string
+	Responce chan CounterDataResponce
+}
+
+type CollectedDataRequest struct {
+	Responce chan CollectedData
+}
+
 type CollectedData struct {
 	GaugeData   map[string]float64
 	CounterData map[string]int64
@@ -34,13 +59,24 @@ func (data *CollectedData) Initiate() {
 	data.CounterData = map[string]int64{}
 }
 
-func (data *CollectedData) RunReciver(guageChan chan GaugeDataUpdate, counterChan chan CounterDataUpdate, end context.Context) {
+func (data *CollectedData) RunReciver(
+	gaugeUpdateChan chan GaugeDataUpdate, counterUpdateChan chan CounterDataUpdate,
+	gaugeRequestChan chan GaugeDataRequest, counterRequestChan chan CounterDataRequest,
+	requestChan chan CollectedDataRequest, end context.Context) {
 	for {
 		select {
-		case update := <-guageChan:
+		case update := <-gaugeUpdateChan:
 			data.GaugeData[update.Name] = update.Value
-		case update := <-counterChan:
+		case update := <-counterUpdateChan:
 			data.CounterData[update.Name] += update.Value
+		case request := <-gaugeRequestChan:
+			value, ok := data.GaugeData[request.Name]
+			request.Responce <- GasugeDataResponce{value, ok}
+		case request := <-counterRequestChan:
+			value, ok := data.CounterData[request.Name]
+			request.Responce <- CounterDataResponce{value, ok}
+		case request := <-requestChan:
+			request.Responce <- *data
 		case <-end.Done():
 			return
 		}
@@ -103,7 +139,88 @@ func MakeHandleCounterUpdate(counterChan chan CounterDataUpdate) http.HandlerFun
 	}
 }
 
-func MakeRouter(guageChan chan GaugeDataUpdate, counterChan chan CounterDataUpdate) chi.Router {
+func MakeHandleGaugeValue(gaugeRequestChan chan GaugeDataRequest) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Set("content-type", "text/plain; charset=utf-8")
+		metricName := chi.URLParam(req, "metricName")
+
+		if metricName == "" {
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte("Empty metric_id"))
+			return
+		}
+		responce := make(chan GasugeDataResponce, 1)
+		gaugeRequestChan <- GaugeDataRequest{metricName, responce}
+
+		res := <-responce
+		if res.Success {
+			rw.WriteHeader(http.StatusOK)
+			rw.Write([]byte(strconv.FormatFloat(res.Value, 'f', -1, 64)))
+		} else {
+			rw.WriteHeader(http.StatusNotFound)
+			rw.Write([]byte("metric not found"))
+		}
+	}
+}
+
+func MakeHandleCounterValue(counterRequestChan chan CounterDataRequest) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Set("content-type", "text/plain; charset=utf-8")
+		metricName := chi.URLParam(req, "metricName")
+
+		if metricName == "" {
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte("Empty metric_id"))
+			return
+		}
+		responce := make(chan CounterDataResponce, 1)
+		counterRequestChan <- CounterDataRequest{metricName, responce}
+
+		res := <-responce
+		if res.Success {
+			rw.WriteHeader(http.StatusOK)
+			rw.Write([]byte(strconv.Itoa(int(res.Value))))
+		} else {
+			rw.WriteHeader(http.StatusNotFound)
+			rw.Write([]byte("metric not found"))
+		}
+	}
+}
+
+func MakeGetHomeHandler(requestChan chan CollectedDataRequest) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Set("content-type", "text/html; charset=utf-8")
+
+		responce := make(chan CollectedData, 1)
+		requestChan <- CollectedDataRequest{responce}
+		data := <-responce
+
+		metrics := map[string]string{}
+
+		for key, value := range data.CounterData {
+			metrics[key] = strconv.Itoa(int(value))
+		}
+		for key, value := range data.GaugeData {
+			metrics[key] = strconv.FormatFloat(value, 'f', -1, 64)
+		}
+
+		t, err := template.ParseFiles("home_page.html")
+		if err != nil {
+			fmt.Println("Could not parse template:", err)
+			return
+		}
+		err = t.Execute(rw, metrics)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+}
+
+func MakeRouter(
+	gaugeUpdateChan chan GaugeDataUpdate, counterUpdateChan chan CounterDataUpdate,
+	gaugeRequestChan chan GaugeDataRequest, counterRequestChan chan CounterDataRequest,
+	requestChan chan CollectedDataRequest) chi.Router {
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -111,14 +228,33 @@ func MakeRouter(guageChan chan GaugeDataUpdate, counterChan chan CounterDataUpda
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	// r.Post("/", func(rw http.ResponseWriter, r *http.Request) {
-	// 	rw.Header().Set("content-type", "text/plain")
-	// 	rw.WriteHeader(http.StatusNotFound)
-	// 	rw.Write(nil)
-	// })
+	r.Get("/", MakeGetHomeHandler(requestChan))
+
+	r.Route("/value", func(r chi.Router) {
+		r.Get("/gauge/{metricName}", MakeHandleGaugeValue(gaugeRequestChan))
+		r.Get("/counter/{metricName}", MakeHandleCounterValue(counterRequestChan))
+
+		r.Post("/{metricType}/{metricName}", func(rw http.ResponseWriter, r *http.Request) {
+			rw.Header().Set("content-type", "text/plain; charset=utf-8")
+			rw.WriteHeader(http.StatusNotImplemented)
+			rw.Write(nil)
+		})
+
+		r.Post("/gauge", func(rw http.ResponseWriter, r *http.Request) {
+			rw.Header().Set("content-type", "text/plain; charset=utf-8")
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write(nil)
+		})
+		r.Post("/counter", func(rw http.ResponseWriter, r *http.Request) {
+			rw.Header().Set("content-type", "text/plain; charset=utf-8")
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write(nil)
+		})
+	})
+
 	r.Route("/update", func(r chi.Router) {
-		r.Post("/gauge/{metricName}/{metricValue}", MakeHandleGaugeUpdate(guageChan))
-		r.Post("/counter/{metricName}/{metricValue}", MakeHandleCounterUpdate(counterChan))
+		r.Post("/gauge/{metricName}/{metricValue}", MakeHandleGaugeUpdate(gaugeUpdateChan))
+		r.Post("/counter/{metricName}/{metricValue}", MakeHandleCounterUpdate(counterUpdateChan))
 
 		r.Post("/gauge/{metricName}", func(rw http.ResponseWriter, r *http.Request) {
 			rw.Header().Set("content-type", "text/plain; charset=utf-8")
@@ -154,9 +290,13 @@ func (dataServer *DataServer) Initite() {
 	dataServer.DataHolder.Initiate()
 }
 
-func (dataServer *DataServer) RunHTTPServer(guageChan chan GaugeDataUpdate, counterChan chan CounterDataUpdate, end context.Context) {
+func (dataServer *DataServer) RunHTTPServer(
+	guageUpdateChan chan GaugeDataUpdate, counterUpdateChan chan CounterDataUpdate,
+	gaugeRequestChan chan GaugeDataRequest, counterRequestChan chan CounterDataRequest,
+	requestChan chan CollectedDataRequest, end context.Context) {
+
 	dataServer.Initite()
-	r := MakeRouter(guageChan, counterChan)
+	r := MakeRouter(guageUpdateChan, counterUpdateChan, gaugeRequestChan, counterRequestChan, requestChan)
 
 	server := &http.Server{
 		Addr:    dataServer.Server,
@@ -171,16 +311,21 @@ func (dataServer *DataServer) RunHTTPServer(guageChan chan GaugeDataUpdate, coun
 }
 
 func (dataServer *DataServer) Run(end context.Context) {
-	guageChan := make(chan GaugeDataUpdate, 1024)
-	counterChan := make(chan CounterDataUpdate, 1024)
+	gaugeUpdateChan := make(chan GaugeDataUpdate, 1024)
+	counterUpdateChan := make(chan CounterDataUpdate, 1024)
+	gaugeRequestChan := make(chan GaugeDataRequest, 1024)
+	counterRequestChan := make(chan CounterDataRequest, 1024)
+	requestChan := make(chan CollectedDataRequest, 1024)
 
 	DataHolderEndCtx, DataHolderCancel := context.WithCancel(end)
 	defer DataHolderCancel()
-	go dataServer.DataHolder.RunReciver(guageChan, counterChan, DataHolderEndCtx)
+	go dataServer.DataHolder.RunReciver(
+		gaugeUpdateChan, counterUpdateChan, gaugeRequestChan, counterRequestChan, requestChan, DataHolderEndCtx)
 
 	httpServerEndCtx, httpServerCancel := context.WithCancel(end)
 	defer httpServerCancel()
-	dataServer.RunHTTPServer(guageChan, counterChan, httpServerEndCtx)
+	dataServer.RunHTTPServer(
+		gaugeUpdateChan, counterUpdateChan, gaugeRequestChan, counterRequestChan, requestChan, httpServerEndCtx)
 }
 
 func RunServerDefault() {
