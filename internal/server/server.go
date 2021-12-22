@@ -204,7 +204,7 @@ func MakeGetHomeHandler(requestChan chan CollectedDataRequest) http.HandlerFunc 
 			metrics[key] = strconv.FormatFloat(value, 'f', -1, 64)
 		}
 
-		t, err := template.ParseFiles("home_page.html")
+		t, err := template.ParseFiles("../../template/home_page.html")
 		if err != nil {
 			fmt.Println("Could not parse template:", err)
 			return
