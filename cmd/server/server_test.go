@@ -88,7 +88,10 @@ func TestStatHandler(t *testing.T) {
 
 	guageChan := make(chan server.GaugeDataUpdate, 1024)
 	counterChan := make(chan server.CounterDataUpdate, 1024)
-	r := server.MakeRouter(guageChan, counterChan)
+	gaugeRequestChan := make(chan server.GaugeDataRequest, 1024)
+	counterRequestChan := make(chan server.CounterDataRequest, 1024)
+	requestChan := make(chan server.CollectedDataRequest, 1024)
+	r := server.MakeRouter(guageChan, counterChan, gaugeRequestChan, counterRequestChan, requestChan)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
