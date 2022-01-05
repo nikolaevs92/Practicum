@@ -1,9 +1,28 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/nikolaevs92/Practicum/internal/agent"
+	"github.com/nikolaevs92/Practicum/internal/config"
 )
 
 func main() {
-	agent.RunAgentDefault()
+	cancelChan := make(chan os.Signal, 1)
+	signal.Notify(cancelChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-cancelChan
+		cancel()
+	}()
+
+	conf := config.LoadConfig()
+	collector := agent.New(*conf.Agent)
+	collector.Run(ctx)
+
+	fmt.Println("Program end")
 }

@@ -1,15 +1,20 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/signal"
+	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/nikolaevs92/Practicum/internal/data_storage"
 	"github.com/nikolaevs92/Practicum/internal/server"
 )
 
@@ -86,12 +91,20 @@ func TestStatHandler(t *testing.T) {
 		},
 	}
 
-	guageChan := make(chan server.GaugeDataUpdate, 1024)
-	counterChan := make(chan server.CounterDataUpdate, 1024)
-	gaugeRequestChan := make(chan server.GaugeDataRequest, 1024)
-	counterRequestChan := make(chan server.CounterDataRequest, 1024)
-	requestChan := make(chan server.CollectedDataRequest, 1024)
-	r := server.MakeRouter(guageChan, counterChan, gaugeRequestChan, counterRequestChan, requestChan)
+	cancelChan := make(chan os.Signal, 1)
+	signal.Notify(cancelChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		<-cancelChan
+		cancel()
+	}()
+
+	storage := data_storage.New()
+	storage.Init()
+	go storage.RunReciver(ctx)
+
+	r := server.MakeRouter(*storage)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
