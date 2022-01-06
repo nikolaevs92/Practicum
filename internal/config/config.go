@@ -1,8 +1,6 @@
 package config
 
 import (
-	"time"
-
 	"github.com/spf13/viper"
 
 	"github.com/nikolaevs92/Practicum/internal/agent"
@@ -10,8 +8,8 @@ import (
 )
 
 const (
-	DefaultPollInterval   = 2 * time.Second
-	DefaultReportInterval = 2 * time.Second
+	DefaultPollInterval   = 2
+	DefaultReportInterval = 10
 	DefaultServer         = "127.0.0.1:8080"
 )
 

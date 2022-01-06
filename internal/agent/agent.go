@@ -65,6 +65,7 @@ func (collector *CollectorAgent) MakePostUrl(metricType string, metricName strin
 
 func (collector *CollectorAgent) PostOneGaugeStat(metricName string, metricValue float64) {
 	url := collector.MakePostUrl(gaugeTypeName, metricName, strconv.FormatFloat(metricValue, 'f', -1, 64))
+	// fmt.Println(url)
 	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
 	if err != nil {
 		print(err)
@@ -120,8 +121,8 @@ func (collector *CollectorAgent) Run(end context.Context) error {
 		return err
 	}
 
-	collectTimer := time.NewTicker(time.Duration(collector.PollInterval) * time.Second)
-	reportTimer := time.NewTicker(time.Duration(collector.ReportInterval) * time.Second)
+	collectTimer := time.NewTicker(collector.PollInterval)
+	reportTimer := time.NewTicker(collector.ReportInterval)
 
 	for {
 		select {

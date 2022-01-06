@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/nikolaevs92/Practicum/internal/agent"
+	"github.com/nikolaevs92/Practicum/internal/config"
 	"github.com/nikolaevs92/Practicum/internal/server"
 
 	"github.com/stretchr/testify/assert"
@@ -19,13 +20,14 @@ func TestCollector(t *testing.T) {
 		"HeapReleased", "HeapSys", "LastGC", "Lookups", "MCacheInuse", "MCacheSys", "MSpanInuse", "MSpanSys", "Mallocs",
 		"NextGC", "NumForcedGC", "NumGC", "OtherSys", "PauseTotalNs", "StackInuse", "StackSys", "Sys", "RandomValue",
 	}
+	conf := config.LoadConfig()
 
-	httpServer := new(server.DataServer)
+	httpServer := server.New(*conf.Server)
 	serverCtx, serverCancel := context.WithCancel(context.Background())
 	go httpServer.Run(serverCtx)
 	defer serverCancel()
 
-	collector := new(agent.CollectorAgent)
+	collector := agent.New(*conf.Agent)
 	collectorCtx, collectorCancel := context.WithCancel(context.Background())
 	go collector.Run(collectorCtx)
 
