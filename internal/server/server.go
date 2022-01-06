@@ -11,7 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/nikolaevs92/Practicum/internal/data_storage"
+	"github.com/nikolaevs92/Practicum/internal/datastorage"
 )
 
 type DataBase interface {
@@ -21,8 +21,8 @@ type DataBase interface {
 	GetStats() (map[string]float64, map[string]uint64, error)
 	Init()
 	RunReciver(context.Context)
-	GetCounterData() map[string]uint64
-	GetGaugeData() map[string]float64
+	// GetCounterData() map[string]uint64
+	// GetGaugeData() map[string]float64
 }
 
 func MakeHandlerUpdate(data DataBase) http.HandlerFunc {
@@ -32,7 +32,7 @@ func MakeHandlerUpdate(data DataBase) http.HandlerFunc {
 		metricName := chi.URLParam(req, "metricName")
 		metricValue := chi.URLParam(req, "metricValue")
 
-		if metricType != data_storage.GaugeTypeName && metricType != data_storage.CounterTypeName {
+		if metricType != datastorage.GaugeTypeName && metricType != datastorage.CounterTypeName {
 			rw.WriteHeader(http.StatusNotImplemented)
 			rw.Write([]byte("Wrong metric type"))
 			return
@@ -197,7 +197,7 @@ func (dataServer *DataServer) Init() {
 func New(config Config) *DataServer {
 	server := new(DataServer)
 	server.Server = config.Server
-	server.DataHolder = data_storage.New()
+	server.DataHolder = datastorage.New()
 	server.Init()
 	return server
 }
