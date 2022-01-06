@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"path"
@@ -59,25 +60,33 @@ func (collector *CollectorAgent) Collect(t time.Time) {
 	collector.PollCount++
 }
 
-func (collector *CollectorAgent) MakePostUrl(metricType string, metricName string, metricValue string) string {
-	return path.Join(collector.Server, "update", metricType, metricName, metricValue)
-}
+// func (collector *CollectorAgent) MakePostUrl(metricType string, metricName string, metricValue string) string {
+// 	fmt.Println(collector.Server)
+// 	upath := collector.Server
+// 	upath = path.Join(upath, "update")
+// 	upath = path.Join(upath, metricType)
+// 	upath = path.Join(upath, metricName)
+// 	upath = path.Join(upath, metricValue)
+// 	return upath
+// 	// return path.Join(collector.Server, "update", metricType, metricName, metricValue)
+// }
 
 func (collector *CollectorAgent) PostOneGaugeStat(metricName string, metricValue float64) {
-	url := collector.MakePostUrl(gaugeTypeName, metricName, strconv.FormatFloat(metricValue, 'f', -1, 64))
-	// fmt.Println(url)
+	url := "http://" + path.Join(collector.Server, "update", gaugeTypeName, metricName, strconv.FormatFloat(metricValue, 'f', -1, 64))
 	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
 	if err != nil {
-		print(err)
+		fmt.Println(err)
+		return
 	}
 	defer resp.Body.Close()
 }
 
 func (collector *CollectorAgent) PostOneCounterStat(metricName string, metricValue uint64) {
-	url := collector.MakePostUrl(gaugeTypeName, metricName, strconv.FormatUint(metricValue, 10))
+	url := "http://" + path.Join(collector.Server, "update", counterTypeName, metricName, strconv.FormatUint(metricValue, 10))
 	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
 	if err != nil {
-		print(err)
+		fmt.Println(err)
+		return
 	}
 	defer resp.Body.Close()
 }

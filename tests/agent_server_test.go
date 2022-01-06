@@ -14,7 +14,7 @@ import (
 )
 
 func TestCollector(t *testing.T) {
-	counterKeyValues := map[string]int64{"PollCount": 5}
+	counterKeyValues := map[string]uint64{"PollCount": 5}
 	gaugeKeys := [...]string{
 		"Alloc", "BuckHashSys", "Frees", "GCCPUFraction", "GCSys", "HeapAlloc", "HeapIdle", "HeapInuse", "HeapObjects",
 		"HeapReleased", "HeapSys", "LastGC", "Lookups", "MCacheInuse", "MCacheSys", "MSpanInuse", "MSpanSys", "Mallocs",
