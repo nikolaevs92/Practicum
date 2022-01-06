@@ -73,6 +73,14 @@ func (data *DataStorage) Init() {
 	data.RequestChan = make(chan CollectedDataRequest, 1024)
 }
 
+func (data *DataStorage) GetCounterData() map[string]uint64 {
+	return data.CounterData
+}
+
+func (data *DataStorage) GetGaugeData() map[string]float64 {
+	return data.GaugeData
+}
+
 func New() *DataStorage {
 	dataStorage := new(DataStorage)
 	dataStorage.Init()

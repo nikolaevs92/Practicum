@@ -14,7 +14,18 @@ import (
 	"github.com/nikolaevs92/Practicum/internal/data_storage"
 )
 
-func MakeHandlerUpdate(data data_storage.DataStorage) http.HandlerFunc {
+type DataBase interface {
+	GetUpdate(string, string, string) error
+	GetGaugeValue(string) (float64, error)
+	GetCounterValue(string) (uint64, error)
+	GetStats() (map[string]float64, map[string]uint64, error)
+	Init()
+	RunReciver(context.Context)
+	GetCounterData() map[string]uint64
+	GetGaugeData() map[string]float64
+}
+
+func MakeHandlerUpdate(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		rw.Header().Set("content-type", "text/plain; charset=utf-8")
 		metricType := chi.URLParam(req, "metricType")
@@ -45,7 +56,7 @@ func MakeHandlerUpdate(data data_storage.DataStorage) http.HandlerFunc {
 	}
 }
 
-func MakeHandleGaugeValue(data data_storage.DataStorage) http.HandlerFunc {
+func MakeHandleGaugeValue(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		rw.Header().Set("content-type", "text/plain; charset=utf-8")
 		metricName := chi.URLParam(req, "metricName")
@@ -68,7 +79,7 @@ func MakeHandleGaugeValue(data data_storage.DataStorage) http.HandlerFunc {
 	}
 }
 
-func MakeHandleCounterValue(data data_storage.DataStorage) http.HandlerFunc {
+func MakeHandleCounterValue(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		rw.Header().Set("content-type", "text/plain; charset=utf-8")
 		metricName := chi.URLParam(req, "metricName")
@@ -91,7 +102,7 @@ func MakeHandleCounterValue(data data_storage.DataStorage) http.HandlerFunc {
 	}
 }
 
-func MakeGetHomeHandler(dataStorage data_storage.DataStorage) http.HandlerFunc {
+func MakeGetHomeHandler(dataStorage DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		rw.Header().Set("content-type", "text/html; charset=utf-8")
 
@@ -118,7 +129,7 @@ func MakeGetHomeHandler(dataStorage data_storage.DataStorage) http.HandlerFunc {
 	}
 }
 
-func MakeRouter(dataStorage data_storage.DataStorage) chi.Router {
+func MakeRouter(dataStorage DataBase) chi.Router {
 
 	r := chi.NewRouter()
 
@@ -175,7 +186,7 @@ type Config struct {
 }
 
 type DataServer struct {
-	DataHolder data_storage.DataStorage
+	DataHolder DataBase
 	Config
 }
 
@@ -186,9 +197,9 @@ func (dataServer *DataServer) Init() {
 func New(config Config) *DataServer {
 	server := new(DataServer)
 	server.Server = config.Server
+	server.DataHolder = data_storage.New()
 	server.Init()
 	return server
-
 }
 
 func (dataServer *DataServer) RunHTTPServer(end context.Context) {

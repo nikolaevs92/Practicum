@@ -78,6 +78,9 @@ func (collector *CollectorAgent) PostOneGaugeStat(metricName string, metricValue
 		fmt.Println(err)
 		return
 	}
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf(url, " status code ", resp.StatusCode)
+	}
 	defer resp.Body.Close()
 }
 
@@ -87,6 +90,9 @@ func (collector *CollectorAgent) PostOneCounterStat(metricName string, metricVal
 	if err != nil {
 		fmt.Println(err)
 		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf(url, " status code ", resp.StatusCode)
 	}
 	defer resp.Body.Close()
 }
