@@ -104,7 +104,7 @@ func TestStatHandler(t *testing.T) {
 	storage.Init()
 	go storage.RunReciver(ctx)
 
-	r := server.MakeRouter(*storage)
+	r := server.MakeRouter(storage)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
