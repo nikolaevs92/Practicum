@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/nikolaevs92/Practicum/internal/data_storage"
 	"github.com/nikolaevs92/Practicum/internal/server"
 )
 
