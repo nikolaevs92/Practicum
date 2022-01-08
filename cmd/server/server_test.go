@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/nikolaevs92/Practicum/internal/datastorage"
 	"github.com/nikolaevs92/Practicum/internal/server"
 )
 
@@ -99,7 +100,7 @@ func TestStatHandler(t *testing.T) {
 		cancel()
 	}()
 
-	storage := data_storage.New()
+	storage := datastorage.New()
 	storage.Init()
 	go storage.RunReciver(ctx)
 
