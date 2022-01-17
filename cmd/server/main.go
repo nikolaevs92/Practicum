@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -24,5 +24,5 @@ func main() {
 	}()
 	dataServer.Run(ctx)
 
-	fmt.Println("Program end")
+	log.Println("Program end")
 }

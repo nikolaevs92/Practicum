@@ -25,7 +25,7 @@ const (
 )
 
 type CollectorAgent struct {
-	Config
+	cfg Config
 
 	stats       runtime.MemStats
 	PollCount   uint64
@@ -34,20 +34,18 @@ type CollectorAgent struct {
 
 func New(config Config) *CollectorAgent {
 	collector := new(CollectorAgent)
-	collector.Server = config.Server
-	collector.PollInterval = config.PollInterval
-	collector.ReportInterval = config.ReportInterval
+	collector.cfg = config
 	return collector
 }
 
 func (collector *CollectorAgent) CheckInit() (bool, error) {
-	if collector.Server == "" {
+	if collector.cfg.Server == "" {
 		return false, errors.New("agent: Server field must be defined")
 	}
-	if collector.PollInterval == 0 {
+	if collector.cfg.PollInterval == 0 {
 		return false, errors.New("agent: PollInterval field must be defined")
 	}
-	if collector.ReportInterval == 0 {
+	if collector.cfg.ReportInterval == 0 {
 		return false, errors.New("agent: ReportInterval field must be defined")
 	}
 
@@ -60,19 +58,8 @@ func (collector *CollectorAgent) Collect(t time.Time) {
 	collector.PollCount++
 }
 
-// func (collector *CollectorAgent) MakePostUrl(metricType string, metricName string, metricValue string) string {
-// 	fmt.Println(collector.Server)
-// 	upath := collector.Server
-// 	upath = path.Join(upath, "update")
-// 	upath = path.Join(upath, metricType)
-// 	upath = path.Join(upath, metricName)
-// 	upath = path.Join(upath, metricValue)
-// 	return upath
-// 	// return path.Join(collector.Server, "update", metricType, metricName, metricValue)
-// }
-
 func (collector *CollectorAgent) PostOneGaugeStat(metricName string, metricValue float64) {
-	url := "http://" + path.Join(collector.Server, "update", gaugeTypeName, metricName, strconv.FormatFloat(metricValue, 'f', -1, 64))
+	url := "http://" + path.Join(collector.cfg.Server, "update", gaugeTypeName, metricName, strconv.FormatFloat(metricValue, 'f', -1, 64))
 	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
 	if err != nil {
 		fmt.Println(err)
@@ -85,7 +72,7 @@ func (collector *CollectorAgent) PostOneGaugeStat(metricName string, metricValue
 }
 
 func (collector *CollectorAgent) PostOneCounterStat(metricName string, metricValue uint64) {
-	url := "http://" + path.Join(collector.Server, "update", counterTypeName, metricName, strconv.FormatUint(metricValue, 10))
+	url := "http://" + path.Join(collector.cfg.Server, "update", counterTypeName, metricName, strconv.FormatUint(metricValue, 10))
 	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
 	if err != nil {
 		fmt.Println(err)
@@ -136,8 +123,8 @@ func (collector *CollectorAgent) Run(end context.Context) error {
 		return err
 	}
 
-	collectTimer := time.NewTicker(collector.PollInterval)
-	reportTimer := time.NewTicker(collector.ReportInterval)
+	collectTimer := time.NewTicker(collector.cfg.PollInterval)
+	reportTimer := time.NewTicker(collector.cfg.ReportInterval)
 
 	for {
 		select {
