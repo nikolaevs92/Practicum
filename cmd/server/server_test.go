@@ -1,13 +1,20 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/signal"
+	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/nikolaevs92/Practicum/internal/datastorage"
 	"github.com/nikolaevs92/Practicum/internal/server"
 )
 
@@ -19,86 +26,110 @@ func TestStatHandler(t *testing.T) {
 	}{
 		{
 			testName:   "empty_update",
-			urlPath:    "/",
+			urlPath:    "/update/",
 			statusCode: 404,
 		},
 		{
 			testName:   "wrong_path_len",
-			urlPath:    "/asdd/",
+			urlPath:    "/update/asdd/",
 			statusCode: 404,
 		},
 		{
 			testName:   "wrong_path_len",
-			urlPath:    "/asd/asdasd//asd",
+			urlPath:    "/update/asd/asdasd//asd",
 			statusCode: 404,
 		},
 		{
 			testName:   "wrong_type",
-			urlPath:    "/guaaage/fds/235",
+			urlPath:    "/update/guaaage/fds/235",
 			statusCode: 501,
 		},
 		{
 			testName:   "empty_metric_name",
-			urlPath:    "/gauge//343.000",
+			urlPath:    "/update/gauge//343.000",
 			statusCode: 400,
 		},
 		{
 			testName:   "empty_value",
-			urlPath:    "/gauge/asd/",
+			urlPath:    "/update/gauge/asd",
 			statusCode: 400,
 		},
 		{
 			testName:   "correct_guage",
-			urlPath:    "/gauge/asd/234.1",
+			urlPath:    "/update/gauge/asd/234.1",
 			statusCode: 200,
 		},
 		{
 			testName:   "correct_guage",
-			urlPath:    "/gauge/asd/-1234.1",
+			urlPath:    "/update/gauge/asd/-1234.1",
 			statusCode: 200,
 		},
 		{
 			testName:   "correct_guage",
-			urlPath:    "/gauge/aFFsd/0.001",
+			urlPath:    "/update/gauge/aFFsd/0.001",
 			statusCode: 200,
 		},
 		{
 			testName:   "correct_guage",
-			urlPath:    "/gauge/as111d/1111",
+			urlPath:    "/update/gauge/as111d/1111",
 			statusCode: 200,
 		},
 		{
 			testName:   "correct_counter",
-			urlPath:    "/counter/as111d/1111",
+			urlPath:    "/update/counter/as111d/1111",
 			statusCode: 200,
 		},
 		{
 			testName:   "correct_counter",
-			urlPath:    "/counter/a/1111111",
+			urlPath:    "/update/counter/a/1111111",
 			statusCode: 200,
 		},
 		{
 			testName:   "correct_counter",
-			urlPath:    "/counter/as1dD1d/0",
+			urlPath:    "/update/counter/as1dD1d/0",
 			statusCode: 200,
 		},
 	}
+
+	cancelChan := make(chan os.Signal, 1)
+	signal.Notify(cancelChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		<-cancelChan
+		cancel()
+	}()
+
+	storage := datastorage.New()
+	storage.Init()
+	go storage.RunReciver(ctx)
+
+	r := server.MakeRouter(storage)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, tt.urlPath, nil)
-			w := httptest.NewRecorder()
-			guageChan := make(chan server.GaugeDataUpdate, 1024)
-			counterChan := make(chan server.CounterDataUpdate, 1024)
-			// h := http.HandlerFunc(UserViewHandler(tt.users))
-			h := server.MakeHandler(guageChan, counterChan, "/")
-			h.ServeHTTP(w, request)
-			result := w.Result()
+			resp, body := testRequest(t, ts, "POST", tt.urlPath)
+			defer resp.Body.Close()
 
-			assert.Equal(t, tt.statusCode, result.StatusCode)
-			assert.Equal(t, "text/plain", result.Header.Get("Content-Type"))
-
-			err := result.Body.Close()
-			require.NoError(t, err)
+			if !assert.Equal(t, tt.statusCode, resp.StatusCode) {
+				fmt.Println(body)
+			}
+			assert.Equal(t, "text/plain; charset=utf-8", resp.Header.Get("Content-Type"))
 		})
 	}
+}
+
+func testRequest(t *testing.T, ts *httptest.Server, method string, path string) (*http.Response, string) {
+	req, err := http.NewRequest(method, ts.URL+path, nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	return resp, string(respBody)
 }
