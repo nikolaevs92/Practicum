@@ -17,10 +17,10 @@ import (
 )
 
 type Config struct {
-	Server         string
-	PollInterval   time.Duration
-	ReportInterval time.Duration
-	ReportRetries  int
+	Server         string        `mapstructure:"ADDRESS"`
+	PollInterval   time.Duration `mapstructure:"POLL_INTERVAL"`
+	ReportInterval time.Duration `mapstructure:"REPORT_INTERVAL"`
+	ReportRetries  int           `mapstructure:"ADDRESS"`
 }
 
 const (

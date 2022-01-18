@@ -15,10 +15,10 @@ const (
 )
 
 const (
-	envPollInterval   = "POOL_INTERVAL"
+	envPollInterval   = "POLL_INTERVAL"
 	envReportInterval = "REPORT_INTERVAL"
 	envReportRetries  = "REPORT_RETRIES"
-	envServer         = "SERVER"
+	envServer         = "ADDRESS"
 )
 
 type Config struct {
