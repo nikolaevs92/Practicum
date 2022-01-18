@@ -1,22 +1,26 @@
 package agent
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"path"
 	"runtime"
-	"strconv"
-	"strings"
 	"time"
+
+	"github.com/nikolaevs92/Practicum/internal/datastorage"
 )
 
 type Config struct {
 	Server         string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
+	ReportRetries  int
 }
 
 const (
@@ -38,6 +42,7 @@ func New(config Config) *CollectorAgent {
 	return collector
 }
 
+// TODO: тут не должно быть?
 func (collector *CollectorAgent) CheckInit() (bool, error) {
 	if collector.cfg.Server == "" {
 		return false, errors.New("agent: Server field must be defined")
@@ -53,35 +58,60 @@ func (collector *CollectorAgent) CheckInit() (bool, error) {
 }
 
 func (collector *CollectorAgent) Collect(t time.Time) {
+	log.Println("Start collect stat")
+
 	runtime.ReadMemStats(&collector.stats)
 	collector.RandomValue = rand.Float64()
 	collector.PollCount++
+
+	log.Println("End collect stat")
+}
+
+func (collector *CollectorAgent) PostWithRetrues(url string, contentType string, body []byte) (*http.Response, error) {
+	resp, err := http.Post(url, contentType, bytes.NewReader(body))
+	for i := 0; i < collector.cfg.ReportRetries && err != nil; i++ {
+		resp, err = http.Post(url, "application/json", bytes.NewReader(body))
+	}
+	return resp, err
+}
+
+func (collector *CollectorAgent) PostOneStat(metrics datastorage.Metrics) {
+	log.Println("Post one stat")
+	log.Println(metrics)
+	url := "http://" + path.Join(collector.cfg.Server, "update")
+
+	body, err := json.Marshal(metrics)
+	if err != nil {
+		log.Println("Error while marshal " + err.Error())
+		return
+	}
+	resp, err := collector.PostWithRetrues(url, "application/json", body)
+	if err != nil {
+		log.Println("Post error" + err.Error())
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf(url, " status code ", resp.StatusCode)
+	}
+	log.Println("Post one stat: succesed")
 }
 
 func (collector *CollectorAgent) PostOneGaugeStat(metricName string, metricValue float64) {
-	url := "http://" + path.Join(collector.cfg.Server, "update", gaugeTypeName, metricName, strconv.FormatFloat(metricValue, 'f', -1, 64))
-	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	if resp.StatusCode != http.StatusOK {
-		fmt.Printf(url, " status code ", resp.StatusCode)
-	}
-	defer resp.Body.Close()
+	collector.PostOneStat(datastorage.Metrics{
+		ID:    metricName,
+		MType: gaugeTypeName,
+		Value: metricValue,
+	})
 }
 
 func (collector *CollectorAgent) PostOneCounterStat(metricName string, metricValue uint64) {
-	url := "http://" + path.Join(collector.cfg.Server, "update", counterTypeName, metricName, strconv.FormatUint(metricValue, 10))
-	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	if resp.StatusCode != http.StatusOK {
-		fmt.Printf(url, " status code ", resp.StatusCode)
-	}
-	defer resp.Body.Close()
+	collector.PostOneStat(datastorage.Metrics{
+		ID:    metricName,
+		MType: counterTypeName,
+		Delta: metricValue,
+	})
 }
 
 func (collector *CollectorAgent) Report(t time.Time) {
@@ -118,6 +148,7 @@ func (collector *CollectorAgent) Report(t time.Time) {
 }
 
 func (collector *CollectorAgent) Run(end context.Context) error {
+	log.Println("Collector run started")
 	ok, err := collector.CheckInit()
 	if !ok {
 		return err
@@ -133,6 +164,7 @@ func (collector *CollectorAgent) Run(end context.Context) error {
 		case t := <-reportTimer.C:
 			collector.Report(t)
 		case <-end.Done():
+			log.Println("Collector stoped")
 			return nil
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -21,8 +22,40 @@ type DataBase interface {
 	GetStats() (map[string]float64, map[string]uint64, error)
 	Init()
 	RunReciver(context.Context)
-	// GetCounterData() map[string]uint64
-	// GetGaugeData() map[string]float64
+	GetJSONUpdate([]byte) error
+	GetJSONValue([]byte) ([]byte, error)
+}
+
+func MakeHandlerJSONUpdate(data DataBase) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Set("content-type", "application/json")
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+		err = data.GetJSONUpdate(body)
+		if err != nil {
+			rw.WriteHeader(http.StatusNotFound)
+		}
+		rw.Write(body)
+	}
+}
+
+func MakeHandlerJSONValue(data DataBase) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Set("content-type", "application/json")
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+		respBody, err := data.GetJSONValue(body)
+		if err != nil {
+			rw.WriteHeader(http.StatusNotFound)
+		}
+		rw.Write(respBody)
+	}
 }
 
 func MakeHandlerUpdate(data DataBase) http.HandlerFunc {
@@ -143,6 +176,7 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 	r.Route("/value", func(r chi.Router) {
 		r.Get("/gauge/{metricName}", MakeHandleGaugeValue(dataStorage))
 		r.Get("/counter/{metricName}", MakeHandleCounterValue(dataStorage))
+		r.Post("/", MakeHandlerJSONValue(dataStorage))
 
 		r.Post("/{metricType}/{metricName}", func(rw http.ResponseWriter, r *http.Request) {
 			rw.Header().Set("content-type", "text/plain; charset=utf-8")
@@ -170,12 +204,7 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 			rw.WriteHeader(http.StatusBadRequest)
 			rw.Write(nil)
 		})
-
-		// r.Post("/{metricType}/{metricName}/{metricValue}", func(rw http.ResponseWriter, r *http.Request) {
-		// 	rw.Header().Set("content-type", "text/plain; charset=utf-8")
-		// 	rw.WriteHeader(http.StatusNotImplemented)
-		// 	rw.Write(nil)
-		// })
+		r.Post("/", MakeHandlerJSONUpdate(dataStorage))
 	})
 
 	return r

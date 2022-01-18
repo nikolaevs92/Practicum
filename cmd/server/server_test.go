@@ -25,11 +25,6 @@ func TestStatHandler(t *testing.T) {
 		statusCode int
 	}{
 		{
-			testName:   "empty_update",
-			urlPath:    "/update/",
-			statusCode: 404,
-		},
-		{
 			testName:   "wrong_path_len",
 			urlPath:    "/update/asdd/",
 			statusCode: 404,

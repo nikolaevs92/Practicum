@@ -1,9 +1,13 @@
 package main_test
 
 import (
+	// "context"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
+	// "time"
+	// "github.com/nikolaevs92/Practicum/internal/agent"
+	// "github.com/nikolaevs92/Practicum/internal/config"
+	// "github.com/nikolaevs92/Practicum/internal/server"
+	// "github.com/stretchr/testify/assert"
 )
 
 func TestCollector(t *testing.T) {
@@ -28,17 +32,17 @@ func TestCollector(t *testing.T) {
 	// collectorCancel()
 	// for name, value := range counterKeyValues {
 	// 	t.Run(name, func(t *testing.T) {
-	// 		val, ok := httpServer.DataHolder.GetCounterData()[name]
-	// 		assert.True(t, ok)
+	// 		val, ok := httpServer.DataHolder.GetCounterValue(name)
+	// 		assert.True(t, ok == nil)
 	// 		assert.Equal(t, value, val)
 	// 	})
 	// }
 
 	// for _, name := range gaugeKeys {
 	// 	t.Run(name, func(t *testing.T) {
-	// 		_, ok := httpServer.DataHolder.GetGaugeData()[name]
-	// 		assert.True(t, ok)
+	// 		_, ok := httpServer.DataHolder.GetGaugeValue(name)
+	// 		assert.True(t, ok == nil)
 	// 	})
 	// }
-	assert.True(t, true)
+	// assert.True(t, true)
 }
