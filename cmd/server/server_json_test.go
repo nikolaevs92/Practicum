@@ -39,7 +39,7 @@ func TestJSONHandler(t *testing.T) {
 					urlPath:    "/update",
 					input:      datastorage.Metrics{},
 					output:     datastorage.Metrics{},
-					statusCode: 400,
+					statusCode: 404,
 				},
 				{
 					urlPath: "/update",
@@ -98,7 +98,7 @@ func TestJSONHandler(t *testing.T) {
 				if !assert.Equal(t, tq.statusCode, resp.StatusCode) {
 					fmt.Println(body)
 				}
-				assert.Equal(t, "application/json; charset=utf-8", resp.Header.Get("Content-Type"))
+				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 			}
 		})
 		ts.Close()

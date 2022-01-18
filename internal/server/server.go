@@ -28,15 +28,15 @@ type DataBase interface {
 
 func MakeHandlerJSONUpdate(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		rw.Header().Set("content-type", "application/json; charset=utf-8")
+		rw.Header().Set("content-type", "application/json")
 		body, err := io.ReadAll(req.Body)
 		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
+			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
 		err = data.GetJSONUpdate(body)
 		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
+			rw.WriteHeader(http.StatusNotFound)
 		}
 		rw.Write(body)
 	}
@@ -44,7 +44,7 @@ func MakeHandlerJSONUpdate(data DataBase) http.HandlerFunc {
 
 func MakeHandlerJSONValue(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		rw.Header().Set("content-type", "application/json; charset=utf-8")
+		rw.Header().Set("content-type", "application/json")
 		body, err := io.ReadAll(req.Body)
 		if err != nil {
 			rw.WriteHeader(http.StatusNotFound)
@@ -52,7 +52,7 @@ func MakeHandlerJSONValue(data DataBase) http.HandlerFunc {
 		}
 		respBody, err := data.GetJSONValue(body)
 		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
+			rw.WriteHeader(http.StatusNotFound)
 		}
 		rw.Write(respBody)
 	}
