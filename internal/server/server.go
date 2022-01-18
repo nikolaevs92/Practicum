@@ -26,7 +26,7 @@ type DataBase interface {
 	GetJSONValue([]byte) ([]byte, error)
 }
 
-func MakeHandlerJsonUpdate(data DataBase) http.HandlerFunc {
+func MakeHandlerJSONUpdate(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		rw.Header().Set("content-type", "application/json; charset=utf-8")
 		body, err := io.ReadAll(req.Body)
@@ -42,7 +42,7 @@ func MakeHandlerJsonUpdate(data DataBase) http.HandlerFunc {
 	}
 }
 
-func MakeHandlerJsonValue(data DataBase) http.HandlerFunc {
+func MakeHandlerJSONValue(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		rw.Header().Set("content-type", "application/json; charset=utf-8")
 		body, err := io.ReadAll(req.Body)
@@ -176,7 +176,7 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 	r.Route("/value", func(r chi.Router) {
 		r.Get("/gauge/{metricName}", MakeHandleGaugeValue(dataStorage))
 		r.Get("/counter/{metricName}", MakeHandleCounterValue(dataStorage))
-		r.Post("/", MakeHandlerJsonValue(dataStorage))
+		r.Post("/", MakeHandlerJSONValue(dataStorage))
 
 		r.Post("/{metricType}/{metricName}", func(rw http.ResponseWriter, r *http.Request) {
 			rw.Header().Set("content-type", "text/plain; charset=utf-8")
@@ -204,7 +204,7 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 			rw.WriteHeader(http.StatusBadRequest)
 			rw.Write(nil)
 		})
-		r.Post("/", MakeHandlerJsonUpdate(dataStorage))
+		r.Post("/", MakeHandlerJSONUpdate(dataStorage))
 	})
 
 	return r
