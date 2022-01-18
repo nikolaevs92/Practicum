@@ -20,7 +20,7 @@ type Config struct {
 	Server         string        `mapstructure:"ADDRESS"`
 	PollInterval   time.Duration `mapstructure:"POLL_INTERVAL"`
 	ReportInterval time.Duration `mapstructure:"REPORT_INTERVAL"`
-	ReportRetries  int           `mapstructure:"ADDRESS"`
+	ReportRetries  int           `mapstructure:"REPORT_RETRIES"`
 }
 
 const (
