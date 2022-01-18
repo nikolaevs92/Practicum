@@ -1,6 +1,7 @@
 package datastorage
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -14,10 +15,14 @@ type Metrics struct {
 func (metrics *Metrics) GetStrValue() string {
 	switch metrics.MType {
 	case GaugeTypeName:
-		return strconv.FormatFloat(metrics.Value, 'g', 16, 64)
+		return strconv.FormatFloat(metrics.Value, 'g', 20, 64)
 	case CounterTypeName:
 		return strconv.FormatUint(metrics.Delta, 10)
 	default:
 		return ""
 	}
+}
+
+func (metrics Metrics) String() string {
+	return fmt.Sprintf("ID:%v MType:%v Value:%f Delta:%d)", metrics.ID, metrics.MType, metrics.Value, metrics.Delta)
 }
