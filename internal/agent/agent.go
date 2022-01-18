@@ -20,6 +20,7 @@ type Config struct {
 	Server         string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
+	ReportRetries  int
 }
 
 const (
@@ -78,15 +79,18 @@ func (collector *CollectorAgent) PostOneStat(metrics datastorage.Metrics) {
 	}
 
 	resp, err := http.Post(url, "application/json", bytes.NewReader(body))
+	for i := 0; i < collector.cfg.ReportRetries && err != nil; i++ {
+		resp, err = http.Post(url, "application/json", bytes.NewReader(body))
+	}
+
 	if err != nil {
 		log.Println("Post error" + err.Error())
 		return
 	}
-
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf(url, " status code ", resp.StatusCode)
 	}
-	defer resp.Body.Close()
 	log.Println("Post one stat: succesed")
 }
 

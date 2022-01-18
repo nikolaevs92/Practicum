@@ -9,6 +9,7 @@ import (
 
 const (
 	DefaultPollInterval   = 2
+	DefaultReportRetries  = 2
 	DefaultReportInterval = 10
 	DefaultServer         = "127.0.0.1:8080"
 )
@@ -16,6 +17,7 @@ const (
 const (
 	envPollInterval   = "POOL_INTERVAL"
 	envReportInterval = "REPORT_INTERVAL"
+	envReportRetries  = "REPORT_RETRIES"
 	envServer         = "SERVER"
 )
 

@@ -24,5 +24,5 @@ func (metrics *Metrics) GetStrValue() string {
 }
 
 func (metrics Metrics) String() string {
-	return fmt.Sprintf("ID:%v MType:%v Value:%f Delta:%d)", metrics.ID, metrics.MType, metrics.Value, metrics.Delta)
+	return fmt.Sprintf("ID:%v MType:%v Value:%f Delta:%d", metrics.ID, metrics.MType, metrics.Value, metrics.Delta)
 }
