@@ -2,6 +2,7 @@ package datastorage
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 )
@@ -73,14 +74,6 @@ func (data *DataStorage) Init() {
 	data.RequestChan = make(chan CollectedDataRequest, 1024)
 }
 
-// func (data *DataStorage) GetCounterData() map[string]uint64 {
-// 	return data.CounterData
-// }
-
-// func (data *DataStorage) GetGaugeData() map[string]float64 {
-// 	return data.GaugeData
-// }
-
 func New() *DataStorage {
 	dataStorage := new(DataStorage)
 	dataStorage.Init()
@@ -143,6 +136,43 @@ func (data *DataStorage) GetUpdate(metricType string, metricName string, metricV
 	}
 
 	return nil
+}
+
+func (data *DataStorage) GetJSONUpdate(jsonDump []byte) error {
+	metrics := Metrics{}
+	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
+		panic(err)
+	}
+	return data.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
+}
+
+func (data *DataStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
+	metrics := Metrics{}
+	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
+		panic(err)
+	}
+	switch metrics.MType {
+	case GaugeTypeName:
+		value, err := data.GetGaugeValue(metrics.ID)
+		if err != nil {
+			return jsonDump, err
+		}
+		metrics.Value = value
+
+	case CounterTypeName:
+		value, err := data.GetCounterValue(metrics.ID)
+		if err != nil {
+			return jsonDump, err
+		}
+		metrics.Delta = value
+	default:
+		return jsonDump, errors.New("Wrong MType: " + metrics.MType)
+	}
+	res, err := json.Marshal(metrics)
+	if err != nil {
+		return jsonDump, errors.New("error on encoding json")
+	}
+	return res, nil
 }
 
 func (data *DataStorage) GetGaugeValue(metricName string) (float64, error) {
