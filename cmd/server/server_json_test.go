@@ -46,12 +46,12 @@ func TestJSONHandler(t *testing.T) {
 					input: datastorage.Metrics{
 						ID:    "some",
 						MType: datastorage.GaugeTypeName,
-						Value: 0.1,
+						Value: 764875.0703412438,
 					},
 					output: datastorage.Metrics{
 						ID:    "some",
 						MType: datastorage.GaugeTypeName,
-						Value: 0.1,
+						Value: 764875.0703412438,
 					},
 					statusCode: 200,
 				},
@@ -64,7 +64,7 @@ func TestJSONHandler(t *testing.T) {
 					output: datastorage.Metrics{
 						ID:    "some",
 						MType: datastorage.GaugeTypeName,
-						Value: 0.1,
+						Value: 764875.0703412438,
 					},
 					statusCode: 200,
 				},
@@ -92,12 +92,14 @@ func TestJSONHandler(t *testing.T) {
 
 		t.Run(tt.testName, func(t *testing.T) {
 			for _, tq := range tt.queries {
-				resp, body := testJSONRequest(t, ts, "POST", tq.urlPath, tq.input)
+				resp, metrics := testJSONRequest(t, ts, "POST", tq.urlPath, tq.input)
 				defer resp.Body.Close()
 
 				if !assert.Equal(t, tq.statusCode, resp.StatusCode) {
-					fmt.Println(body)
+					fmt.Println(metrics)
 				}
+				assert.Equal(t, tq.output.Delta, metrics.Delta)
+				assert.Equal(t, tq.output.Value, metrics.Value)
 				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 			}
 		})

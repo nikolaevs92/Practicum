@@ -14,7 +14,7 @@ type Metrics struct {
 func (metrics *Metrics) GetStrValue() string {
 	switch metrics.MType {
 	case GaugeTypeName:
-		return strconv.FormatFloat(metrics.Value, 'g', 1, 64)
+		return strconv.FormatFloat(metrics.Value, 'g', 16, 64)
 	case CounterTypeName:
 		return strconv.FormatUint(metrics.Delta, 10)
 	default:
