@@ -67,6 +67,14 @@ func (collector *CollectorAgent) Collect(t time.Time) {
 	log.Println("End collect stat")
 }
 
+func (collector *CollectorAgent) PostWithRetrues(url string, contentType string, body []byte) (*http.Response, error) {
+	resp, err := http.Post(url, contentType, bytes.NewReader(body))
+	for i := 0; i < collector.cfg.ReportRetries && err != nil; i++ {
+		resp, err = http.Post(url, "application/json", bytes.NewReader(body))
+	}
+	return resp, err
+}
+
 func (collector *CollectorAgent) PostOneStat(metrics datastorage.Metrics) {
 	log.Println("Post one stat")
 	log.Println(metrics)
@@ -77,17 +85,13 @@ func (collector *CollectorAgent) PostOneStat(metrics datastorage.Metrics) {
 		log.Println("Error while marshal " + err.Error())
 		return
 	}
-
-	resp, err := http.Post(url, "application/json", bytes.NewReader(body))
-	for i := 0; i < collector.cfg.ReportRetries && err != nil; i++ {
-		resp, err = http.Post(url, "application/json", bytes.NewReader(body))
-	}
-
-	defer resp.Body.Close()
+	resp, err := collector.PostWithRetrues(url, "application/json", body)
 	if err != nil {
 		log.Println("Post error" + err.Error())
 		return
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf(url, " status code ", resp.StatusCode)
 	}
