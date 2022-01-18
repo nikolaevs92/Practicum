@@ -11,8 +11,6 @@ import (
 	"net/http"
 	"path"
 	"runtime"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/nikolaevs92/Practicum/internal/datastorage"
@@ -93,29 +91,19 @@ func (collector *CollectorAgent) PostOneStat(metrics datastorage.Metrics) {
 }
 
 func (collector *CollectorAgent) PostOneGaugeStat(metricName string, metricValue float64) {
-	url := "http://" + path.Join(collector.cfg.Server, "update", gaugeTypeName, metricName, strconv.FormatFloat(metricValue, 'f', -1, 64))
-	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
-	if err != nil {
-		log.Println("Post error" + err.Error())
-		return
-	}
-	if resp.StatusCode != http.StatusOK {
-		fmt.Printf(url, " status code ", resp.StatusCode)
-	}
-	defer resp.Body.Close()
+	collector.PostOneStat(datastorage.Metrics{
+		ID:    metricName,
+		MType: gaugeTypeName,
+		Value: metricValue,
+	})
 }
 
 func (collector *CollectorAgent) PostOneCounterStat(metricName string, metricValue uint64) {
-	url := "http://" + path.Join(collector.cfg.Server, "update", counterTypeName, metricName, strconv.FormatUint(metricValue, 10))
-	resp, err := http.Post(url, "text/plain", strings.NewReader("body"))
-	if err != nil {
-		log.Println("Post error" + err.Error())
-		return
-	}
-	if resp.StatusCode != http.StatusOK {
-		fmt.Printf(url, " status code ", resp.StatusCode)
-	}
-	defer resp.Body.Close()
+	collector.PostOneStat(datastorage.Metrics{
+		ID:    metricName,
+		MType: counterTypeName,
+		Delta: metricValue,
+	})
 }
 
 func (collector *CollectorAgent) Report(t time.Time) {
