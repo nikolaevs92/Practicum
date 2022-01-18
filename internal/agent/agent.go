@@ -83,11 +83,11 @@ func (collector *CollectorAgent) PostOneStat(metrics datastorage.Metrics) {
 		resp, err = http.Post(url, "application/json", bytes.NewReader(body))
 	}
 
+	defer resp.Body.Close()
 	if err != nil {
 		log.Println("Post error" + err.Error())
 		return
 	}
-	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf(url, " status code ", resp.StatusCode)
 	}
