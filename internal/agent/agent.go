@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -11,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/nikolaevs92/Practicum/internal/datastorage"
 )
 
 type Config struct {
@@ -56,6 +60,26 @@ func (collector *CollectorAgent) Collect(t time.Time) {
 	runtime.ReadMemStats(&collector.stats)
 	collector.RandomValue = rand.Float64()
 	collector.PollCount++
+}
+
+func (collector *CollectorAgent) PostOneStat(metrics datastorage.Metrics) {
+	url := "http://" + path.Join(collector.cfg.Server, "update")
+
+	body, err := json.Marshal(metrics)
+	if err != nil {
+		panic(err)
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewReader(body))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf(url, " status code ", resp.StatusCode)
+	}
+	defer resp.Body.Close()
 }
 
 func (collector *CollectorAgent) PostOneGaugeStat(metricName string, metricValue float64) {

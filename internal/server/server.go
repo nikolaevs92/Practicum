@@ -47,7 +47,7 @@ func MakeHandlerJsonValue(data DataBase) http.HandlerFunc {
 		rw.Header().Set("content-type", "application/json; charset=utf-8")
 		body, err := io.ReadAll(req.Body)
 		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
+			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
 		respBody, err := data.GetJSONValue(body)
