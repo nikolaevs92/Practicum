@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/nikolaevs92/Practicum/internal/config"
 	"github.com/nikolaevs92/Practicum/internal/datastorage"
 	"github.com/nikolaevs92/Practicum/internal/server"
 )
@@ -76,6 +77,7 @@ func TestJSONHandler(t *testing.T) {
 	signal.Notify(cancelChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	ctx, cancel := context.WithCancel(context.Background())
 
+	cfg := config.LoadConfig()
 	go func() {
 		<-cancelChan
 		cancel()
@@ -83,7 +85,7 @@ func TestJSONHandler(t *testing.T) {
 
 	for _, tt := range tests {
 
-		storage := datastorage.New()
+		storage := datastorage.New(cfg.Server.StorageConfig)
 		storage.Init()
 		go storage.RunReciver(ctx)
 
