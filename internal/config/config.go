@@ -8,17 +8,17 @@ import (
 )
 
 const (
-	DefaultPollInterval   = 2
+	DefaultPollInterval   = "2s"
 	DefaultReportRetries  = 2
-	DefaultReportInterval = 10
+	DefaultReportInterval = "10s"
 	DefaultServer         = "127.0.0.1:8080"
 )
 
 const (
-	envPollInterval   = "POOL_INTERVAL"
+	envPollInterval   = "POLL_INTERVAL"
 	envReportInterval = "REPORT_INTERVAL"
 	envReportRetries  = "REPORT_RETRIES"
-	envServer         = "SERVER"
+	envServer         = "ADDRESS"
 )
 
 type Config struct {

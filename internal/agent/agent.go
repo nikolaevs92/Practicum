@@ -17,10 +17,10 @@ import (
 )
 
 type Config struct {
-	Server         string
-	PollInterval   time.Duration
-	ReportInterval time.Duration
-	ReportRetries  int
+	Server         string        `mapstructure:"ADDRESS"`
+	PollInterval   time.Duration `mapstructure:"POLL_INTERVAL"`
+	ReportInterval time.Duration `mapstructure:"REPORT_INTERVAL"`
+	ReportRetries  int           `mapstructure:"REPORT_RETRIES"`
 }
 
 const (
@@ -116,6 +116,8 @@ func (collector *CollectorAgent) PostOneCounterStat(metricName string, metricVal
 
 func (collector *CollectorAgent) Report(t time.Time) {
 	go collector.PostOneGaugeStat("Alloc", float64(collector.stats.Alloc))
+	go collector.PostOneGaugeStat("TotalAlloc", float64(collector.stats.TotalAlloc))
+	go collector.PostOneGaugeStat("Frees", float64(collector.stats.Frees))
 	go collector.PostOneGaugeStat("BuckHashSys", float64(collector.stats.BuckHashSys))
 	go collector.PostOneGaugeStat("Frees", float64(collector.stats.Frees))
 	go collector.PostOneGaugeStat("GCCPUFraction", float64(collector.stats.GCCPUFraction))
