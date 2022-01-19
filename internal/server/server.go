@@ -254,8 +254,10 @@ func (dataServer *DataServer) RunHTTPServer(end context.Context) {
 	}
 	go func() {
 		<-end.Done()
-		fmt.Println("Shutting down the HTTP server...")
-		server.Shutdown(end)
+		log.Println("Shutting down the HTTP server...")
+		if err := server.Shutdown(end); err != nil {
+			panic(err)
+		}
 	}()
 	log.Fatal(server.ListenAndServe())
 }
@@ -269,5 +271,6 @@ func (dataServer *DataServer) Run(end context.Context) {
 
 	httpServerEndCtx, httpServerCancel := context.WithCancel(end)
 	defer httpServerCancel()
-	dataServer.RunHTTPServer(httpServerEndCtx)
+	go dataServer.RunHTTPServer(httpServerEndCtx)
+	<-end.Done()
 }

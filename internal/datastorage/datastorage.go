@@ -109,6 +109,7 @@ func (storage *DataStorage) RestoreData() error {
 	default:
 		return err
 	}
+
 	log.Println("Restore data: succesed")
 	return nil
 }
@@ -148,7 +149,13 @@ func New(cfg StorageConfig) *DataStorage {
 
 func (storage *DataStorage) RunReciver(end context.Context) {
 	log.Println("Start Reciver")
-	storeTimer := time.NewTicker(storage.cfg.StoreInterval)
+	var storeTimer *time.Ticker
+	if storage.cfg.StoreInterval > 0 {
+		storeTimer = time.NewTicker(storage.cfg.StoreInterval)
+	} else {
+		storeTimer = time.NewTicker(1)
+		storeTimer.Stop()
+	}
 
 	for {
 		select {
