@@ -101,12 +101,15 @@ func (storage *DataStorage) RestoreData() error {
 	defer file.Close()
 
 	decoder := gob.NewDecoder(file)
-	if err := decoder.Decode(&storage.Data); err != io.EOF && err != nil {
+	err = decoder.Decode(&storage.Data)
+	switch err {
+	case io.EOF:
+		storage.Data.GaugeData = map[string]float64{}
+		storage.Data.CounterData = map[string]uint64{}
+	default:
 		return err
 	}
-	val, ok := storage.Data.CounterData["AAAAAAAAAA"]
 	log.Println("Restore data: succesed")
-	log.Println(val, ok)
 	return nil
 }
 
@@ -114,8 +117,6 @@ func (storage *DataStorage) StoreData(t time.Time) error {
 	if !storage.cfg.Store {
 		return nil
 	}
-	storage.Data.CounterData["AAAAAAAAAA"] = 1
-	log.Println("Start store data to: " + storage.cfg.StoreFile)
 
 	file, err := os.OpenFile(storage.cfg.StoreFile, os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
@@ -162,7 +163,6 @@ func (storage *DataStorage) RunReciver(end context.Context) {
 			request.Responce <- GasugeDataResponce{value, ok}
 		case request := <-storage.CounterRequestChan:
 			value, ok := storage.Data.CounterData[request.Name]
-			log.Println(request.Name, value, ok)
 			request.Responce <- CounterDataResponce{value, ok}
 		case request := <-storage.RequestChan:
 			request.Responce <- CollectedDataResponce{storage.Data.GaugeData, storage.Data.CounterData, true}
