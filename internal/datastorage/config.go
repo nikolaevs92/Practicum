@@ -10,6 +10,7 @@ type StorageConfig struct {
 	StoreFile     string
 	Restore       bool
 	Store         bool
+	Synchronized  bool
 }
 
 func (cfg StorageConfig) String() string {

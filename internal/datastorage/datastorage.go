@@ -206,6 +206,9 @@ func (storage *DataStorage) GetUpdate(metricType string, metricName string, metr
 	if !success {
 		return errors.New("DataStorage: GetUpdate: some error")
 	}
+	if storage.cfg.Synchronized {
+		storage.StoreData(time.Now())
+	}
 
 	return nil
 }

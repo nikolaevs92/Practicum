@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/spf13/viper"
 
 	"github.com/nikolaevs92/Practicum/internal/datastorage"
@@ -20,6 +22,7 @@ func NewServerConfig(v *viper.Viper) *server.Config {
 			StoreFile:     v.GetString(envStoreFile),
 			Restore:       v.GetBool(envRestore),
 			Store:         v.GetString(envStoreFile) != "",
+			Synchronized:  v.GetDuration(envStoreInterval) == time.Duration(0),
 		},
 	}
 }
