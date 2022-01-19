@@ -38,7 +38,7 @@ type Config struct {
 func LoadConfig() *Config {
 	v := viper.New()
 
-	// v.AllowEmptyEnv(true)
+	v.AllowEmptyEnv(true)
 	v.AutomaticEnv()
 
 	conf := &Config{
