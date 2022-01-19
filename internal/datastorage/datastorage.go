@@ -2,9 +2,14 @@ package datastorage
 
 import (
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"io"
+	"log"
+	"os"
 	"strconv"
+	"time"
 )
 
 const (
@@ -54,56 +59,123 @@ type CollectedDataResponce struct {
 	Success     bool
 }
 
+type StoredData struct {
+	GaugeData   map[string]float64
+	CounterData map[string]uint64
+
+	storedTS time.Time
+}
+
 type DataStorage struct {
-	GaugeData          map[string]float64
-	CounterData        map[string]uint64
+	Data               StoredData
 	GaugeUpdateChan    chan GaugeDataUpdate
 	CounterUpdateChan  chan CounterDataUpdate
 	GaugeRequestChan   chan GaugeDataRequest
 	CounterRequestChan chan CounterDataRequest
 	RequestChan        chan CollectedDataRequest
+
+	cfg StorageConfig
 }
 
-func (data *DataStorage) Init() {
-	data.GaugeData = map[string]float64{}
-	data.CounterData = map[string]uint64{}
-	data.GaugeUpdateChan = make(chan GaugeDataUpdate, 1024)
-	data.CounterUpdateChan = make(chan CounterDataUpdate, 1024)
-	data.GaugeRequestChan = make(chan GaugeDataRequest, 1024)
-	data.CounterRequestChan = make(chan CounterDataRequest, 1024)
-	data.RequestChan = make(chan CollectedDataRequest, 1024)
+func (storage *DataStorage) Init() {
+	storage.GaugeUpdateChan = make(chan GaugeDataUpdate, 1024)
+	storage.CounterUpdateChan = make(chan CounterDataUpdate, 1024)
+	storage.GaugeRequestChan = make(chan GaugeDataRequest, 1024)
+	storage.CounterRequestChan = make(chan CounterDataRequest, 1024)
+	storage.RequestChan = make(chan CollectedDataRequest, 1024)
 }
 
-func New() *DataStorage {
+func (storage *DataStorage) RestoreData() error {
+	if !(storage.cfg.Restore && storage.cfg.Store) {
+		log.Println("No data restoring")
+		storage.Data.GaugeData = map[string]float64{}
+		storage.Data.CounterData = map[string]uint64{}
+		return nil
+	}
+	log.Println("Start restore data from: " + storage.cfg.StoreFile)
+
+	file, err := os.OpenFile(storage.cfg.StoreFile, os.O_RDONLY|os.O_CREATE, 0777)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	decoder := gob.NewDecoder(file)
+	err = decoder.Decode(&storage.Data)
+	switch err {
+	case io.EOF:
+		storage.Data.GaugeData = map[string]float64{}
+		storage.Data.CounterData = map[string]uint64{}
+	default:
+		return err
+	}
+	log.Println("Restore data: succesed")
+	return nil
+}
+
+func (storage *DataStorage) StoreData(t time.Time) error {
+	if !storage.cfg.Store {
+		return nil
+	}
+
+	file, err := os.OpenFile(storage.cfg.StoreFile, os.O_WRONLY|os.O_CREATE, 0777)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	storage.Data.storedTS = t
+	encoder := gob.NewEncoder(file)
+	if err := encoder.Encode(&storage.Data); err != io.EOF && err != nil {
+		return err
+	}
+
+	log.Println("Store data: succesed")
+	return nil
+}
+
+func New(cfg StorageConfig) *DataStorage {
+	log.Println("Create Storage")
+	log.Println(cfg)
 	dataStorage := new(DataStorage)
 	dataStorage.Init()
+	dataStorage.cfg = cfg
+	if err := dataStorage.RestoreData(); err != nil {
+		panic(err)
+	}
 	return dataStorage
 }
 
-func (data *DataStorage) RunReciver(end context.Context) {
+func (storage *DataStorage) RunReciver(end context.Context) {
+	log.Println("Start Reciver")
+	storeTimer := time.NewTicker(storage.cfg.StoreInterval)
+
 	for {
 		select {
-		case update := <-data.GaugeUpdateChan:
-			data.GaugeData[update.Name] = update.Value
+		case update := <-storage.GaugeUpdateChan:
+			storage.Data.GaugeData[update.Name] = update.Value
 			update.Responce <- true
-		case update := <-data.CounterUpdateChan:
-			data.CounterData[update.Name] += update.Value
+		case update := <-storage.CounterUpdateChan:
+			storage.Data.CounterData[update.Name] += update.Value
 			update.Responce <- true
-		case request := <-data.GaugeRequestChan:
-			value, ok := data.GaugeData[request.Name]
+		case request := <-storage.GaugeRequestChan:
+			value, ok := storage.Data.GaugeData[request.Name]
 			request.Responce <- GasugeDataResponce{value, ok}
-		case request := <-data.CounterRequestChan:
-			value, ok := data.CounterData[request.Name]
+		case request := <-storage.CounterRequestChan:
+			value, ok := storage.Data.CounterData[request.Name]
 			request.Responce <- CounterDataResponce{value, ok}
-		case request := <-data.RequestChan:
-			request.Responce <- CollectedDataResponce{data.GaugeData, data.CounterData, true}
+		case request := <-storage.RequestChan:
+			request.Responce <- CollectedDataResponce{storage.Data.GaugeData, storage.Data.CounterData, true}
+		case t := <-storeTimer.C:
+			_ = storage.StoreData(t)
 		case <-end.Done():
+			log.Println("End Reciver")
 			return
 		}
 	}
 }
 
-func (data *DataStorage) GetUpdate(metricType string, metricName string, metricValue string) error {
+func (storage *DataStorage) GetUpdate(metricType string, metricName string, metricValue string) error {
 	if metricName == "" {
 		return errors.New("DataStorage: GetUpdate: metricName should be not empty")
 	}
@@ -116,14 +188,14 @@ func (data *DataStorage) GetUpdate(metricType string, metricName string, metricV
 		if err != nil {
 			return errors.New("DataStorage: GetUpdate: error whith parsing gauge metricValue: ") // + err.GetString())
 		}
-		data.GaugeUpdateChan <- GaugeDataUpdate{metricName, value, responceChan}
+		storage.GaugeUpdateChan <- GaugeDataUpdate{metricName, value, responceChan}
 
 	case CounterTypeName:
 		value, err := strconv.ParseUint(metricValue, 10, 64)
 		if err != nil {
 			return errors.New("DataStorage: GetUpdate: error whith parsing counter metricValue: ") // + err.GetString())
 		}
-		data.CounterUpdateChan <- CounterDataUpdate{metricName, value, responceChan}
+		storage.CounterUpdateChan <- CounterDataUpdate{metricName, value, responceChan}
 
 	default:
 		return errors.New(
@@ -134,33 +206,36 @@ func (data *DataStorage) GetUpdate(metricType string, metricName string, metricV
 	if !success {
 		return errors.New("DataStorage: GetUpdate: some error")
 	}
+	if storage.cfg.Synchronized {
+		storage.StoreData(time.Now())
+	}
 
 	return nil
 }
 
-func (data *DataStorage) GetJSONUpdate(jsonDump []byte) error {
+func (storage *DataStorage) GetJSONUpdate(jsonDump []byte) error {
 	metrics := Metrics{}
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
 		panic(err)
 	}
-	return data.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
+	return storage.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
 }
 
-func (data *DataStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
+func (storage *DataStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 	metrics := Metrics{}
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
 		panic(err)
 	}
 	switch metrics.MType {
 	case GaugeTypeName:
-		value, err := data.GetGaugeValue(metrics.ID)
+		value, err := storage.GetGaugeValue(metrics.ID)
 		if err != nil {
 			return jsonDump, err
 		}
 		metrics.Value = value
 
 	case CounterTypeName:
-		value, err := data.GetCounterValue(metrics.ID)
+		value, err := storage.GetCounterValue(metrics.ID)
 		if err != nil {
 			return jsonDump, err
 		}
@@ -175,12 +250,12 @@ func (data *DataStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 	return res, nil
 }
 
-func (data *DataStorage) GetGaugeValue(metricName string) (float64, error) {
+func (storage *DataStorage) GetGaugeValue(metricName string) (float64, error) {
 	if metricName == "" {
 		return 0, errors.New("DataStorage: GetGaugeValue: metricName should be not empty")
 	}
 	responceChan := make(chan GasugeDataResponce, 1)
-	data.GaugeRequestChan <- GaugeDataRequest{metricName, responceChan}
+	storage.GaugeRequestChan <- GaugeDataRequest{metricName, responceChan}
 
 	responce := <-responceChan
 	if responce.Success {
@@ -190,12 +265,12 @@ func (data *DataStorage) GetGaugeValue(metricName string) (float64, error) {
 	}
 }
 
-func (data *DataStorage) GetCounterValue(metricName string) (uint64, error) {
+func (storage *DataStorage) GetCounterValue(metricName string) (uint64, error) {
 	if metricName == "" {
 		return 0, errors.New("DataStorage: GetCounterValue: metricName should be not empty")
 	}
 	responceChan := make(chan CounterDataResponce, 1)
-	data.CounterRequestChan <- CounterDataRequest{metricName, responceChan}
+	storage.CounterRequestChan <- CounterDataRequest{metricName, responceChan}
 
 	responce := <-responceChan
 	if responce.Success {
@@ -205,9 +280,9 @@ func (data *DataStorage) GetCounterValue(metricName string) (uint64, error) {
 	}
 }
 
-func (data *DataStorage) GetStats() (map[string]float64, map[string]uint64, error) {
+func (storage *DataStorage) GetStats() (map[string]float64, map[string]uint64, error) {
 	responceChan := make(chan CollectedDataResponce, 1)
-	data.RequestChan <- CollectedDataRequest{responceChan}
+	storage.RequestChan <- CollectedDataRequest{responceChan}
 	responce := <-responceChan
 
 	if responce.Success {

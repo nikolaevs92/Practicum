@@ -212,6 +212,19 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 
 type Config struct {
 	Server string
+	datastorage.StorageConfig
+}
+
+func (cfg Config) String() string {
+	if cfg.Store {
+		return fmt.Sprintf(
+			"Server:%s Store:%t Restore:%t StoreInterval:%ds StoreFile:%s",
+			cfg.Server, cfg.Store, cfg.Restore, int(cfg.StoreInterval.Seconds()), cfg.StoreFile)
+	} else {
+		return fmt.Sprintf(
+			"Server:%s Store:%t Restore:%t",
+			cfg.Server, cfg.Store, cfg.Restore)
+	}
 }
 
 type DataServer struct {
@@ -226,13 +239,12 @@ func (dataServer *DataServer) Init() {
 func New(config Config) *DataServer {
 	server := new(DataServer)
 	server.Server = config.Server
-	server.DataHolder = datastorage.New()
+	server.DataHolder = datastorage.New(config.StorageConfig)
 	server.Init()
 	return server
 }
 
 func (dataServer *DataServer) RunHTTPServer(end context.Context) {
-
 	dataServer.Init()
 	r := MakeRouter(dataServer.DataHolder)
 
@@ -249,7 +261,8 @@ func (dataServer *DataServer) RunHTTPServer(end context.Context) {
 }
 
 func (dataServer *DataServer) Run(end context.Context) {
-
+	log.Println("Server Starting")
+	log.Println(dataServer.Config)
 	DataHolderEndCtx, DataHolderCancel := context.WithCancel(end)
 	defer DataHolderCancel()
 	go dataServer.DataHolder.RunReciver(DataHolderEndCtx)

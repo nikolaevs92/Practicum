@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -17,10 +16,10 @@ import (
 )
 
 type Config struct {
-	Server         string        `mapstructure:"ADDRESS"`
-	PollInterval   time.Duration `mapstructure:"POLL_INTERVAL"`
-	ReportInterval time.Duration `mapstructure:"REPORT_INTERVAL"`
-	ReportRetries  int           `mapstructure:"REPORT_RETRIES"`
+	Server         string
+	PollInterval   time.Duration
+	ReportInterval time.Duration
+	ReportRetries  int
 }
 
 const (
@@ -42,21 +41,6 @@ func New(config Config) *CollectorAgent {
 	return collector
 }
 
-// TODO: тут не должно быть?
-func (collector *CollectorAgent) CheckInit() (bool, error) {
-	if collector.cfg.Server == "" {
-		return false, errors.New("agent: Server field must be defined")
-	}
-	if collector.cfg.PollInterval == 0 {
-		return false, errors.New("agent: PollInterval field must be defined")
-	}
-	if collector.cfg.ReportInterval == 0 {
-		return false, errors.New("agent: ReportInterval field must be defined")
-	}
-
-	return true, nil
-}
-
 func (collector *CollectorAgent) Collect(t time.Time) {
 	log.Println("Start collect stat")
 
@@ -76,7 +60,7 @@ func (collector *CollectorAgent) PostWithRetrues(url string, contentType string,
 }
 
 func (collector *CollectorAgent) PostOneStat(metrics datastorage.Metrics) {
-	log.Println("Post one stat")
+	log.Println("Post one stat to " + collector.cfg.Server)
 	log.Println(metrics)
 	url := "http://" + path.Join(collector.cfg.Server, "update")
 
@@ -151,10 +135,6 @@ func (collector *CollectorAgent) Report(t time.Time) {
 
 func (collector *CollectorAgent) Run(end context.Context) error {
 	log.Println("Collector run started")
-	ok, err := collector.CheckInit()
-	if !ok {
-		return err
-	}
 
 	collectTimer := time.NewTicker(collector.cfg.PollInterval)
 	reportTimer := time.NewTicker(collector.cfg.ReportInterval)
