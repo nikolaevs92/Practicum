@@ -66,11 +66,6 @@ type StoredData struct {
 	storedTS time.Time
 }
 
-func (data *StoredData) Init() {
-	data.GaugeData = map[string]float64{}
-	data.CounterData = map[string]uint64{}
-}
-
 type DataStorage struct {
 	Data               StoredData
 	GaugeUpdateChan    chan GaugeDataUpdate
@@ -83,7 +78,6 @@ type DataStorage struct {
 }
 
 func (storage *DataStorage) Init() {
-	storage.Data.Init()
 	storage.GaugeUpdateChan = make(chan GaugeDataUpdate, 1024)
 	storage.CounterUpdateChan = make(chan CounterDataUpdate, 1024)
 	storage.GaugeRequestChan = make(chan GaugeDataRequest, 1024)
@@ -94,6 +88,8 @@ func (storage *DataStorage) Init() {
 func (storage *DataStorage) RestoreData() error {
 	if !(storage.cfg.Restore && storage.cfg.Store) {
 		log.Println("No data restoring")
+		storage.Data.GaugeData = map[string]float64{}
+		storage.Data.CounterData = map[string]uint64{}
 		return nil
 	}
 	log.Println("Start restore data from: " + storage.cfg.StoreFile)
@@ -108,7 +104,9 @@ func (storage *DataStorage) RestoreData() error {
 	if err := decoder.Decode(&storage.Data); err != io.EOF && err != nil {
 		return err
 	}
+	val, ok := storage.Data.CounterData["AAAAAAAAAA"]
 	log.Println("Restore data: succesed")
+	log.Println(val, ok)
 	return nil
 }
 
@@ -164,6 +162,7 @@ func (storage *DataStorage) RunReciver(end context.Context) {
 			request.Responce <- GasugeDataResponce{value, ok}
 		case request := <-storage.CounterRequestChan:
 			value, ok := storage.Data.CounterData[request.Name]
+			log.Println(request.Name, value, ok)
 			request.Responce <- CounterDataResponce{value, ok}
 		case request := <-storage.RequestChan:
 			request.Responce <- CollectedDataResponce{storage.Data.GaugeData, storage.Data.CounterData, true}
