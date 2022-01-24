@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 )
 
@@ -38,7 +39,10 @@ func (m *Metrics) MarshalJSON() ([]byte, error) {
 			// задаём указатель на целевой объект
 			MetricsAlias: (*MetricsAlias)(m),
 		}
-		return json.Marshal(aliasValue)
+		aliasValue.Value = 0
+		body, _ := json.Marshal(aliasValue)
+		log.Println(string(body))
+		return body, nil
 	case GaugeTypeName:
 		aliasValue := &struct {
 			*MetricsAlias
@@ -48,7 +52,10 @@ func (m *Metrics) MarshalJSON() ([]byte, error) {
 			// задаём указатель на целевой объект
 			MetricsAlias: (*MetricsAlias)(m),
 		}
-		return json.Marshal(aliasValue)
+		aliasValue.Delta = 0
+		body, _ := json.Marshal(aliasValue)
+		log.Println(string(body))
+		return body, nil
 	default:
 		return nil, errors.New("wrong MType")
 	}

@@ -68,7 +68,6 @@ func (collector *CollectorAgent) PostOneStat(metrics datastorage.Metrics) {
 		log.Println("Error while marshal " + err.Error())
 		return
 	}
-	log.Println(string(body))
 	resp, err := collector.PostWithRetrues(url, "application/json", body)
 	if err != nil {
 		log.Println("Post error" + err.Error())

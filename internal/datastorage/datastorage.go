@@ -252,7 +252,7 @@ func (storage *DataStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 	default:
 		return jsonDump, errors.New("Wrong MType: " + metrics.MType)
 	}
-	res, err := json.Marshal(metrics)
+	res, err := metrics.MarshalJSON()
 	if err != nil {
 		return jsonDump, errors.New("error on encoding json")
 	}
