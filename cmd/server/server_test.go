@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/nikolaevs92/Practicum/internal/config"
 	"github.com/nikolaevs92/Practicum/internal/datastorage"
 	"github.com/nikolaevs92/Practicum/internal/server"
 )
@@ -24,11 +25,6 @@ func TestStatHandler(t *testing.T) {
 		urlPath    string
 		statusCode int
 	}{
-		{
-			testName:   "empty_update",
-			urlPath:    "/update/",
-			statusCode: 404,
-		},
 		{
 			testName:   "wrong_path_len",
 			urlPath:    "/update/asdd/",
@@ -100,7 +96,8 @@ func TestStatHandler(t *testing.T) {
 		cancel()
 	}()
 
-	storage := datastorage.New()
+	cfg := config.LoadConfig()
+	storage := datastorage.New(cfg.Server.StorageConfig)
 	storage.Init()
 	go storage.RunReciver(ctx)
 

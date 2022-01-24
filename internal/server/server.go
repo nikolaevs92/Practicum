@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -21,8 +22,40 @@ type DataBase interface {
 	GetStats() (map[string]float64, map[string]uint64, error)
 	Init()
 	RunReciver(context.Context)
-	// GetCounterData() map[string]uint64
-	// GetGaugeData() map[string]float64
+	GetJSONUpdate([]byte) error
+	GetJSONValue([]byte) ([]byte, error)
+}
+
+func MakeHandlerJSONUpdate(data DataBase) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Set("content-type", "application/json")
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+		err = data.GetJSONUpdate(body)
+		if err != nil {
+			rw.WriteHeader(http.StatusNotFound)
+		}
+		rw.Write(body)
+	}
+}
+
+func MakeHandlerJSONValue(data DataBase) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		rw.Header().Set("content-type", "application/json")
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+		respBody, err := data.GetJSONValue(body)
+		if err != nil {
+			rw.WriteHeader(http.StatusNotFound)
+		}
+		rw.Write(respBody)
+	}
 }
 
 func MakeHandlerUpdate(data DataBase) http.HandlerFunc {
@@ -143,6 +176,7 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 	r.Route("/value", func(r chi.Router) {
 		r.Get("/gauge/{metricName}", MakeHandleGaugeValue(dataStorage))
 		r.Get("/counter/{metricName}", MakeHandleCounterValue(dataStorage))
+		r.Post("/", MakeHandlerJSONValue(dataStorage))
 
 		r.Post("/{metricType}/{metricName}", func(rw http.ResponseWriter, r *http.Request) {
 			rw.Header().Set("content-type", "text/plain; charset=utf-8")
@@ -170,12 +204,7 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 			rw.WriteHeader(http.StatusBadRequest)
 			rw.Write(nil)
 		})
-
-		// r.Post("/{metricType}/{metricName}/{metricValue}", func(rw http.ResponseWriter, r *http.Request) {
-		// 	rw.Header().Set("content-type", "text/plain; charset=utf-8")
-		// 	rw.WriteHeader(http.StatusNotImplemented)
-		// 	rw.Write(nil)
-		// })
+		r.Post("/", MakeHandlerJSONUpdate(dataStorage))
 	})
 
 	return r
@@ -183,6 +212,19 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 
 type Config struct {
 	Server string
+	datastorage.StorageConfig
+}
+
+func (cfg Config) String() string {
+	if cfg.Store {
+		return fmt.Sprintf(
+			"Server:%s Store:%t Restore:%t StoreInterval:%ds StoreFile:%s",
+			cfg.Server, cfg.Store, cfg.Restore, int(cfg.StoreInterval.Seconds()), cfg.StoreFile)
+	} else {
+		return fmt.Sprintf(
+			"Server:%s Store:%t Restore:%t",
+			cfg.Server, cfg.Store, cfg.Restore)
+	}
 }
 
 type DataServer struct {
@@ -197,13 +239,12 @@ func (dataServer *DataServer) Init() {
 func New(config Config) *DataServer {
 	server := new(DataServer)
 	server.Server = config.Server
-	server.DataHolder = datastorage.New()
+	server.DataHolder = datastorage.New(config.StorageConfig)
 	server.Init()
 	return server
 }
 
 func (dataServer *DataServer) RunHTTPServer(end context.Context) {
-
 	dataServer.Init()
 	r := MakeRouter(dataServer.DataHolder)
 
@@ -213,19 +254,23 @@ func (dataServer *DataServer) RunHTTPServer(end context.Context) {
 	}
 	go func() {
 		<-end.Done()
-		fmt.Println("Shutting down the HTTP server...")
-		server.Shutdown(end)
+		log.Println("Shutting down the HTTP server...")
+		if err := server.Shutdown(end); err != nil {
+			panic(err)
+		}
 	}()
 	log.Fatal(server.ListenAndServe())
 }
 
 func (dataServer *DataServer) Run(end context.Context) {
-
+	log.Println("Server Starting")
+	log.Println(dataServer.Config)
 	DataHolderEndCtx, DataHolderCancel := context.WithCancel(end)
 	defer DataHolderCancel()
 	go dataServer.DataHolder.RunReciver(DataHolderEndCtx)
 
 	httpServerEndCtx, httpServerCancel := context.WithCancel(end)
 	defer httpServerCancel()
-	dataServer.RunHTTPServer(httpServerEndCtx)
+	go dataServer.RunHTTPServer(httpServerEndCtx)
+	<-end.Done()
 }

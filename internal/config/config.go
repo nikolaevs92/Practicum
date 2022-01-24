@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/spf13/viper"
 
 	"github.com/nikolaevs92/Practicum/internal/agent"
@@ -8,15 +10,23 @@ import (
 )
 
 const (
-	DefaultPollInterval   = 2
-	DefaultReportInterval = 10
+	DefaultPollInterval   = time.Second * 2
+	DefaultReportRetries  = 2
+	DefaultReportInterval = time.Second * 10
+	DefaultStoreInterval  = time.Second * 300
+	DefaultStoreFile      = "/tmp/devops-metrics-db.json"
+	DefaultRestore        = true
 	DefaultServer         = "127.0.0.1:8080"
 )
 
 const (
-	envPollInterval   = "POOL_INTERVAL"
+	envPollInterval   = "POLL_INTERVAL"
 	envReportInterval = "REPORT_INTERVAL"
-	envServer         = "SERVER"
+	envStoreInterval  = "STORE_INTERVAL"
+	envStoreFile      = "STORE_FILE"
+	envRestore        = "RESTORE"
+	envReportRetries  = "REPORT_RETRIES"
+	envServer         = "ADDRESS"
 )
 
 type Config struct {
@@ -27,6 +37,8 @@ type Config struct {
 
 func LoadConfig() *Config {
 	v := viper.New()
+
+	v.AllowEmptyEnv(true)
 	v.AutomaticEnv()
 
 	conf := &Config{
