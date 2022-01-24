@@ -1,7 +1,10 @@
 package datastorage
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"strconv"
 )
 
@@ -20,6 +23,39 @@ func (metrics *Metrics) GetStrValue() string {
 		return strconv.FormatUint(metrics.Delta, 10)
 	default:
 		return ""
+	}
+}
+
+func (metrics *Metrics) MarshalJSON() ([]byte, error) {
+	switch metrics.MType {
+	case CounterTypeName:
+		aliasValue := &struct {
+			ID    string `json:"id"`   // имя метрики
+			MType string `json:"type"` // параметр, принимающий значение gauge или counter
+			Delta uint64 `json:"delta"`
+		}{
+			ID:    metrics.ID,
+			MType: metrics.MType,
+			Delta: metrics.Delta,
+		}
+		body, _ := json.Marshal(aliasValue)
+		log.Println(string(body))
+		return body, nil
+	case GaugeTypeName:
+		aliasValue := &struct {
+			ID    string  `json:"id"`    // имя метрики
+			MType string  `json:"type"`  // параметр, принимающий значение gauge или counter
+			Value float64 `json:"value"` // значение метрики в случае передачи gauge
+		}{
+			ID:    metrics.ID,
+			MType: metrics.MType,
+			Value: metrics.Value,
+		}
+		body, _ := json.Marshal(aliasValue)
+		log.Println(string(body))
+		return body, nil
+	default:
+		return nil, errors.New("wrong MType")
 	}
 }
 
