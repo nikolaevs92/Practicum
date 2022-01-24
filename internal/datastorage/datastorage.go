@@ -240,6 +240,7 @@ func (storage *DataStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 			return jsonDump, err
 		}
 		metrics.Value = value
+		metrics.Delta = 0
 
 	case CounterTypeName:
 		value, err := storage.GetCounterValue(metrics.ID)
@@ -247,6 +248,7 @@ func (storage *DataStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 			return jsonDump, err
 		}
 		metrics.Delta = value
+		metrics.Value = 0
 	default:
 		return jsonDump, errors.New("Wrong MType: " + metrics.MType)
 	}
