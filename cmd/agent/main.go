@@ -28,6 +28,9 @@ func main() {
 	pflag.Parse()
 
 	v := viper.New()
+	v.AllowEmptyEnv(true)
+	v.AutomaticEnv()
+
 	conf := config.NewAgentConfigWithDefaults(v, *adress, *pollInterval, *reportInterval)
 	collector := agent.New(*conf)
 	collector.Run(ctx)

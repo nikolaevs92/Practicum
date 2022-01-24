@@ -21,6 +21,9 @@ func main() {
 	pflag.Parse()
 
 	v := viper.New()
+	v.AllowEmptyEnv(true)
+	v.AutomaticEnv()
+
 	cfg := config.NewServerConfigWithDefaults(v, *adress, *storeInterval, *storeFile, *restore)
 	dataServer := server.New(*cfg)
 	cancelChan := make(chan os.Signal, 1)
