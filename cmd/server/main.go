@@ -14,10 +14,10 @@ import (
 )
 
 func main() {
-	adress := pflag.String("a", config.DefaultServer, "")
-	storeInterval := pflag.Duration("i", config.DefaultStoreInterval, "")
-	storeFile := pflag.String("f", config.DefaultStoreFile, "")
-	restore := pflag.Bool("r", config.DefaultRestore, "")
+	adress := pflag.StringP("adress", "a", config.DefaultServer, "")
+	storeInterval := pflag.DurationP("strore-interval", "i", config.DefaultStoreInterval, "")
+	storeFile := pflag.StringP("store-file", "f", config.DefaultStoreFile, "")
+	restore := pflag.BoolP("restore", "r", config.DefaultRestore, "")
 	pflag.Parse()
 
 	v := viper.New()

@@ -22,16 +22,16 @@ func main() {
 		cancel()
 	}()
 
-	adress := pflag.String("a", config.DefaultServer, "")
-	pollInterval := pflag.Duration("p", config.DefaultPollInterval, "")
-	reportInterval := pflag.Duration("r", config.DefaultReportInterval, "")
+	address := pflag.StringP("address", "a", config.DefaultServer, "")
+	pollInterval := pflag.DurationP("pool-inreval", "p", config.DefaultPollInterval, "")
+	reportInterval := pflag.DurationP("report-interval", "r", config.DefaultReportInterval, "")
 	pflag.Parse()
 
 	v := viper.New()
 	v.AllowEmptyEnv(true)
 	v.AutomaticEnv()
 
-	conf := config.NewAgentConfigWithDefaults(v, *adress, *pollInterval, *reportInterval)
+	conf := config.NewAgentConfigWithDefaults(v, *address, *pollInterval, *reportInterval)
 	collector := agent.New(*conf)
 	collector.Run(ctx)
 
