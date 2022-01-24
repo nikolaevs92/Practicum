@@ -26,17 +26,17 @@ func (metrics *Metrics) GetStrValue() string {
 	}
 }
 
-func (m *Metrics) MarshalJSON() ([]byte, error) {
-	switch m.MType {
+func (metrics *Metrics) MarshalJSON() ([]byte, error) {
+	switch metrics.MType {
 	case CounterTypeName:
 		aliasValue := &struct {
 			ID    string `json:"id"`   // имя метрики
 			MType string `json:"type"` // параметр, принимающий значение gauge или counter
 			Delta uint64 `json:"delta"`
 		}{
-			ID:    m.ID,
-			MType: m.MType,
-			Delta: m.Delta,
+			ID:    metrics.ID,
+			MType: metrics.MType,
+			Delta: metrics.Delta,
 		}
 		body, _ := json.Marshal(aliasValue)
 		log.Println(string(body))
@@ -47,9 +47,9 @@ func (m *Metrics) MarshalJSON() ([]byte, error) {
 			MType string  `json:"type"`  // параметр, принимающий значение gauge или counter
 			Value float64 `json:"value"` // значение метрики в случае передачи gauge
 		}{
-			ID:    m.ID,
-			MType: m.MType,
-			Value: m.Value,
+			ID:    metrics.ID,
+			MType: metrics.MType,
+			Value: metrics.Value,
 		}
 		body, _ := json.Marshal(aliasValue)
 		log.Println(string(body))
