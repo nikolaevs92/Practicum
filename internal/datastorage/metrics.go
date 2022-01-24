@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 )
 
@@ -38,9 +37,7 @@ func (metrics *Metrics) MarshalJSON() ([]byte, error) {
 			MType: metrics.MType,
 			Delta: metrics.Delta,
 		}
-		body, _ := json.Marshal(aliasValue)
-		log.Println(string(body))
-		return body, nil
+		return json.Marshal(aliasValue)
 	case GaugeTypeName:
 		aliasValue := &struct {
 			ID    string  `json:"id"`    // имя метрики
@@ -51,9 +48,7 @@ func (metrics *Metrics) MarshalJSON() ([]byte, error) {
 			MType: metrics.MType,
 			Value: metrics.Value,
 		}
-		body, _ := json.Marshal(aliasValue)
-		log.Println(string(body))
-		return body, nil
+		return json.Marshal(aliasValue)
 	default:
 		return nil, errors.New("wrong MType")
 	}
