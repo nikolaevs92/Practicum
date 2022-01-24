@@ -32,27 +32,31 @@ func (m *Metrics) MarshalJSON() ([]byte, error) {
 	switch m.MType {
 	case CounterTypeName:
 		aliasValue := &struct {
-			*MetricsAlias
-			// переопределяем поле внутри анонимной структуры
-			Delta uint64 `json:"delta"`
+			ID    string  `json:"id"`    // имя метрики
+			MType string  `json:"type"`  // параметр, принимающий значение gauge или counter
+			Value float64 `json:"value"` // значение метрики в случае передачи gauge
+			Delta uint64  `json:"delta,omitempty"`
 		}{
-			// задаём указатель на целевой объект
-			MetricsAlias: (*MetricsAlias)(m),
+			ID:    m.ID,
+			MType: m.MType,
+			Delta: m.Delta,
+			Value: 0,
 		}
-		aliasValue.Value = 0
 		body, _ := json.Marshal(aliasValue)
 		log.Println(string(body))
 		return body, nil
 	case GaugeTypeName:
 		aliasValue := &struct {
-			*MetricsAlias
-			// переопределяем поле внутри анонимной структуры
-			Value float64 `json:"value"`
+			ID    string  `json:"id"`   // имя метрики
+			MType string  `json:"type"` // параметр, принимающий значение gauge или counter
+			Delta uint64  `json:"delta"`
+			Value float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 		}{
-			// задаём указатель на целевой объект
-			MetricsAlias: (*MetricsAlias)(m),
+			ID:    m.ID,
+			MType: m.MType,
+			Value: m.Value,
+			Delta: 0,
 		}
-		aliasValue.Delta = 0
 		body, _ := json.Marshal(aliasValue)
 		log.Println(string(body))
 		return body, nil
