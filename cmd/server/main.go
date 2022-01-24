@@ -9,21 +9,27 @@ import (
 
 	"github.com/nikolaevs92/Practicum/internal/config"
 	"github.com/nikolaevs92/Practicum/internal/server"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 func main() {
-	os.Setenv("STORE_FILE", "./.data")
-	cfg := config.LoadConfig()
-	dataServer := server.New(*cfg.Server)
+	adress := pflag.String("a", config.DefaultServer, "")
+	storeInterval := pflag.Duration("i", config.DefaultStoreInterval, "")
+	storeFile := pflag.String("f", config.DefaultStoreFile, "")
+	restore := pflag.Bool("r", config.DefaultRestore, "")
+	pflag.Parse()
+
+	v := viper.New()
+	cfg := config.NewServerConfigWithDefaults(v, *adress, *storeInterval, *storeFile, *restore)
+	dataServer := server.New(*cfg)
 	cancelChan := make(chan os.Signal, 1)
-	// tick := time.NewTicker(4 * time.Second)
 
 	signal.Notify(cancelChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() {
 		<-cancelChan
-		// <-tick.C
 		cancel()
 	}()
 	dataServer.Run(ctx)

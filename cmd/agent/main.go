@@ -9,6 +9,8 @@ import (
 
 	"github.com/nikolaevs92/Practicum/internal/agent"
 	"github.com/nikolaevs92/Practicum/internal/config"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 func main() {
@@ -20,8 +22,14 @@ func main() {
 		cancel()
 	}()
 
-	conf := config.LoadConfig()
-	collector := agent.New(*conf.Agent)
+	adress := pflag.String("a", config.DefaultServer, "")
+	pollInterval := pflag.Duration("p", config.DefaultPollInterval, "")
+	reportInterval := pflag.Duration("r", config.DefaultReportInterval, "")
+	pflag.Parse()
+
+	v := viper.New()
+	conf := config.NewAgentConfigWithDefaults(v, *adress, *pollInterval, *reportInterval)
+	collector := agent.New(*conf)
 	collector.Run(ctx)
 
 	log.Println("Program end")
