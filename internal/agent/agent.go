@@ -3,7 +3,6 @@ package agent
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -64,11 +63,12 @@ func (collector *CollectorAgent) PostOneStat(metrics datastorage.Metrics) {
 	log.Println(metrics)
 	url := "http://" + path.Join(collector.cfg.Server, "update")
 
-	body, err := json.Marshal(metrics)
+	body, err := metrics.MarshalJSON()
 	if err != nil {
 		log.Println("Error while marshal " + err.Error())
 		return
 	}
+	log.Println(string(body))
 	resp, err := collector.PostWithRetrues(url, "application/json", body)
 	if err != nil {
 		log.Println("Post error" + err.Error())
