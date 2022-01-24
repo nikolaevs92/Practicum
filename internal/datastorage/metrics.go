@@ -8,10 +8,10 @@ import (
 )
 
 type Metrics struct {
-	ID    string  `json:"id"`    // имя метрики
-	MType string  `json:"type"`  // параметр, принимающий значение gauge или counter
-	Delta uint64  `json:"delta"` // значение метрики в случае передачи counter
-	Value float64 `json:"value"` // значение метрики в случае передачи gauge
+	ID    string  `json:"id"`              // имя метрики
+	MType string  `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta uint64  `json:"delta.omitempty"` // значение метрики в случае передачи counter
+	Value float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
 func (metrics *Metrics) GetStrValue() string {
@@ -33,7 +33,7 @@ func (m *Metrics) MarshalJSON() ([]byte, error) {
 		aliasValue := &struct {
 			*MetricsAlias
 			// переопределяем поле внутри анонимной структуры
-			Value float64 `json:"value,omitempty"`
+			Delta uint64 `json:"delta"`
 		}{
 			// задаём указатель на целевой объект
 			MetricsAlias: (*MetricsAlias)(m),
@@ -43,7 +43,7 @@ func (m *Metrics) MarshalJSON() ([]byte, error) {
 		aliasValue := &struct {
 			*MetricsAlias
 			// переопределяем поле внутри анонимной структуры
-			Delta uint64 `json:"delta,omitempty"`
+			Value float64 `json:"value"`
 		}{
 			// задаём указатель на целевой объект
 			MetricsAlias: (*MetricsAlias)(m),
