@@ -70,7 +70,11 @@ func MakeHandlerJSONUpdate(data DataBase) http.HandlerFunc {
 		}
 		err = data.GetJSONUpdate(body)
 		if err != nil {
-			rw.WriteHeader(http.StatusNotFound)
+			if err.Error() == "wrong hash" {
+				rw.WriteHeader(http.StatusBadRequest)
+			} else {
+				rw.WriteHeader(http.StatusNotFound)
+			}
 		}
 		rw.Write(body)
 	}
@@ -86,7 +90,11 @@ func MakeHandlerJSONValue(data DataBase) http.HandlerFunc {
 		}
 		respBody, err := data.GetJSONValue(body)
 		if err != nil {
-			rw.WriteHeader(http.StatusNotFound)
+			if err.Error() == "wrong hash" {
+				rw.WriteHeader(http.StatusBadRequest)
+			} else {
+				rw.WriteHeader(http.StatusNotFound)
+			}
 		}
 		rw.Write(respBody)
 	}

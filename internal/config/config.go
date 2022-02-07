@@ -27,6 +27,7 @@ const (
 	envRestore        = "RESTORE"
 	envReportRetries  = "REPORT_RETRIES"
 	envServer         = "ADDRESS"
+	envKey            = "KEY"
 )
 
 type Config struct {

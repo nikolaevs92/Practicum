@@ -225,6 +225,13 @@ func (storage *DataStorage) GetJSONUpdate(jsonDump []byte) error {
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
 		panic(err)
 	}
+
+	metricsHash, _ := metrics.CalcHash(storage.cfg.Key)
+	if storage.cfg.Key != "" && metricsHash != metrics.Hash {
+		log.Println("Wrong hash, " + metricsHash + " " + metrics.Hash)
+		return errors.New("wrong hash")
+	}
+
 	return storage.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
 }
 
@@ -233,6 +240,7 @@ func (storage *DataStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
 		panic(err)
 	}
+
 	switch metrics.MType {
 	case GaugeTypeName:
 		value, err := storage.GetGaugeValue(metrics.ID)
@@ -252,6 +260,8 @@ func (storage *DataStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 	default:
 		return jsonDump, errors.New("Wrong MType: " + metrics.MType)
 	}
+
+	metrics.Hash, _ = metrics.CalcHash(storage.cfg.Key)
 	res, err := metrics.MarshalJSON()
 	if err != nil {
 		return jsonDump, errors.New("error on encoding json")

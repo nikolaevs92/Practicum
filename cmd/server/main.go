@@ -18,13 +18,14 @@ func main() {
 	storeInterval := pflag.DurationP("strore-interval", "i", config.DefaultStoreInterval, "")
 	storeFile := pflag.StringP("store-file", "f", config.DefaultStoreFile, "")
 	restore := pflag.BoolP("restore", "r", config.DefaultRestore, "")
+	key := pflag.StringP("key", "k", "", "")
 	pflag.Parse()
 
 	v := viper.New()
 	v.AllowEmptyEnv(true)
 	v.AutomaticEnv()
 
-	cfg := config.NewServerConfigWithDefaults(v, *adress, *storeInterval, *storeFile, *restore)
+	cfg := config.NewServerConfigWithDefaults(v, *adress, *storeInterval, *storeFile, *restore, *key)
 	dataServer := server.New(*cfg)
 	cancelChan := make(chan os.Signal, 1)
 
