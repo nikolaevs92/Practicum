@@ -228,6 +228,7 @@ func (storage *DataStorage) GetJSONUpdate(jsonDump []byte) error {
 
 	metricsHash, _ := metrics.CalcHash(storage.cfg.Key)
 	if storage.cfg.Key != "" && metricsHash != metrics.Hash {
+		log.Println("Wrong hash, " + metricsHash + " " + metrics.Hash)
 		return errors.New("wrong hash")
 	}
 
@@ -238,11 +239,6 @@ func (storage *DataStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 	metrics := Metrics{}
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
 		panic(err)
-	}
-
-	metricsHash, _ := metrics.CalcHash(storage.cfg.Key)
-	if storage.cfg.Key != "" && metricsHash != metrics.Hash {
-		return jsonDump, errors.New("wrong hash")
 	}
 
 	switch metrics.MType {
