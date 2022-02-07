@@ -11,6 +11,7 @@ type StorageConfig struct {
 	Restore       bool
 	Store         bool
 	Synchronized  bool
+	Key           string
 }
 
 func (cfg StorageConfig) String() string {
