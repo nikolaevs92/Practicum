@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"time"
 
+	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
-	_ "https://github.com/lib/pq"
 )
 
 type SQLStorage struct {
