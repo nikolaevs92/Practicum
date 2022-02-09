@@ -6,6 +6,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	_ "https://github.com/lib/pq"
 )
 
 type SQLStorage struct {
@@ -42,7 +43,7 @@ func (storage *SQLStorage) Init() {
 func (storage *SQLStorage) RunReciver(end context.Context) {
 	storage.ctx = end
 
-	db, err := sql.Open("sqlite3", "db.db")
+	db, err := sql.Open("pq", storage.cfg.DataBaseDSN)
 	if err != nil {
 		panic(err)
 	}
