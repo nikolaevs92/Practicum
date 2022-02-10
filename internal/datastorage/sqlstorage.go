@@ -126,8 +126,10 @@ func (storage *SQLStorage) RunReciver(end context.Context) {
 	defer db.Close()
 
 	// create table
-	storage.DB.QueryContext(storage.ctx, "CREATE TABLE data ( ID text PRIMARY KEY, MType text PRIMARY KEY, Delta integer, Value double precision )")
-
+	_, err = storage.DB.ExecContext(storage.ctx, "CREATE TABLE IF NOT EXISTS data ( ID text PRIMARY KEY, MType text PRIMARY KEY, Delta integer, Value double precision )")
+	if err != nil {
+		panic(err)
+	}
 	<-storage.ctx.Done()
 }
 
