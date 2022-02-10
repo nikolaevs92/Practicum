@@ -20,13 +20,14 @@ func main() {
 	restore := pflag.BoolP("restore", "r", config.DefaultRestore, "")
 	key := pflag.StringP("key", "k", "", "")
 	dataBaseDSN := pflag.StringP("db-dsn", "d", "", "")
+	dataBaseType := pflag.StringP("db-type", "t", "", "")
 	pflag.Parse()
 
 	v := viper.New()
 	v.AllowEmptyEnv(true)
 	v.AutomaticEnv()
 
-	cfg := config.NewServerConfigWithDefaults(v, *adress, *storeInterval, *storeFile, *restore, *key, *dataBaseDSN)
+	cfg := config.NewServerConfigWithDefaults(v, *adress, *storeInterval, *storeFile, *restore, *key, *dataBaseDSN, *dataBaseType)
 	dataServer := server.New(*cfg)
 	cancelChan := make(chan os.Signal, 1)
 

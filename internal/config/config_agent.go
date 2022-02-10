@@ -13,12 +13,14 @@ func NewAgentConfig(v *viper.Viper) *agent.Config {
 	v.SetDefault(envReportInterval, DefaultReportInterval)
 	v.SetDefault(envReportRetries, DefaultReportRetries)
 	v.SetDefault(envServer, DefaultServer)
+	v.SetDefault(envKey, DefaultKey)
 
 	return &agent.Config{
 		PollInterval:   v.GetDuration(envPollInterval),
 		ReportInterval: v.GetDuration(envReportInterval),
 		ReportRetries:  v.GetInt(envReportRetries),
 		Server:         v.GetString(envServer),
+		Key:            v.GetString(envKey),
 	}
 }
 
