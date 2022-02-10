@@ -6,8 +6,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sq
-	lite3"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type SQLStorage struct {
@@ -19,7 +18,6 @@ type SQLStorage struct {
 func NewSQLStorage(cfg StorageConfig) *SQLStorage {
 	dataStorage := new(SQLStorage)
 	dataStorage.cfg = cfg
-	
 	return dataStorage
 }
 
