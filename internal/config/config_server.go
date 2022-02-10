@@ -27,12 +27,15 @@ func NewServerConfig(v *viper.Viper) *server.Config {
 	}
 }
 
-func NewServerConfigWithDefaults(v *viper.Viper, adress string, stroreInterval time.Duration, storeFile string, restore bool, key string) *server.Config {
+func NewServerConfigWithDefaults(
+	v *viper.Viper, adress string, stroreInterval time.Duration, storeFile string, restore bool, key string, dataBaseDSN string) *server.Config {
+
 	v.SetDefault(envServer, adress)
 	v.SetDefault(envStoreInterval, stroreInterval)
 	v.SetDefault(envStoreFile, storeFile)
 	v.SetDefault(envRestore, restore)
 	v.SetDefault(envKey, key)
+	v.SetDefault(envDataBaseDSN, dataBaseDSN)
 
 	return &server.Config{
 		Server: v.GetString(envServer),
@@ -43,6 +46,7 @@ func NewServerConfigWithDefaults(v *viper.Viper, adress string, stroreInterval t
 			Store:         v.GetString(envStoreFile) != "",
 			Synchronized:  v.GetDuration(envStoreInterval) == time.Duration(0),
 			Key:           v.GetString(envKey),
+			DataBaseDSN:   v.GetString(envDataBaseDSN),
 		},
 	}
 }

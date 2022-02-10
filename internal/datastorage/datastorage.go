@@ -66,7 +66,7 @@ type StoredData struct {
 	storedTS time.Time
 }
 
-type DataStorage struct {
+type FileStorage struct {
 	Data               StoredData
 	GaugeUpdateChan    chan GaugeDataUpdate
 	CounterUpdateChan  chan CounterDataUpdate
@@ -77,7 +77,11 @@ type DataStorage struct {
 	cfg StorageConfig
 }
 
-func (storage *DataStorage) Init() {
+func (storage *FileStorage) Ping() bool {
+	return true
+}
+
+func (storage *FileStorage) Init() {
 	storage.GaugeUpdateChan = make(chan GaugeDataUpdate, 1024)
 	storage.CounterUpdateChan = make(chan CounterDataUpdate, 1024)
 	storage.GaugeRequestChan = make(chan GaugeDataRequest, 1024)
@@ -85,7 +89,7 @@ func (storage *DataStorage) Init() {
 	storage.RequestChan = make(chan CollectedDataRequest, 1024)
 }
 
-func (storage *DataStorage) RestoreData() error {
+func (storage *FileStorage) RestoreData() error {
 	if !(storage.cfg.Restore && storage.cfg.Store) {
 		log.Println("No data restoring")
 		storage.Data.GaugeData = map[string]float64{}
@@ -114,7 +118,7 @@ func (storage *DataStorage) RestoreData() error {
 	return nil
 }
 
-func (storage *DataStorage) StoreData(t time.Time) error {
+func (storage *FileStorage) StoreData(t time.Time) error {
 	if !storage.cfg.Store {
 		return nil
 	}
@@ -135,10 +139,10 @@ func (storage *DataStorage) StoreData(t time.Time) error {
 	return nil
 }
 
-func New(cfg StorageConfig) *DataStorage {
+func NewFileStorage(cfg StorageConfig) *FileStorage {
 	log.Println("Create Storage")
 	log.Println(cfg)
-	dataStorage := new(DataStorage)
+	dataStorage := new(FileStorage)
 	dataStorage.Init()
 	dataStorage.cfg = cfg
 	if err := dataStorage.RestoreData(); err != nil {
@@ -147,7 +151,7 @@ func New(cfg StorageConfig) *DataStorage {
 	return dataStorage
 }
 
-func (storage *DataStorage) RunReciver(end context.Context) {
+func (storage *FileStorage) RunReciver(end context.Context) {
 	log.Println("Start Reciver")
 	var storeTimer *time.Ticker
 	if storage.cfg.StoreInterval > 0 {
@@ -182,7 +186,7 @@ func (storage *DataStorage) RunReciver(end context.Context) {
 	}
 }
 
-func (storage *DataStorage) GetUpdate(metricType string, metricName string, metricValue string) error {
+func (storage *FileStorage) GetUpdate(metricType string, metricName string, metricValue string) error {
 	if metricName == "" {
 		return errors.New("DataStorage: GetUpdate: metricName should be not empty")
 	}
@@ -220,7 +224,7 @@ func (storage *DataStorage) GetUpdate(metricType string, metricName string, metr
 	return nil
 }
 
-func (storage *DataStorage) GetJSONUpdate(jsonDump []byte) error {
+func (storage *FileStorage) GetJSONUpdate(jsonDump []byte) error {
 	metrics := Metrics{}
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
 		panic(err)
@@ -235,7 +239,7 @@ func (storage *DataStorage) GetJSONUpdate(jsonDump []byte) error {
 	return storage.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
 }
 
-func (storage *DataStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
+func (storage *FileStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 	metrics := Metrics{}
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
 		panic(err)
@@ -269,7 +273,7 @@ func (storage *DataStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 	return res, nil
 }
 
-func (storage *DataStorage) GetGaugeValue(metricName string) (float64, error) {
+func (storage *FileStorage) GetGaugeValue(metricName string) (float64, error) {
 	if metricName == "" {
 		return 0, errors.New("DataStorage: GetGaugeValue: metricName should be not empty")
 	}
@@ -284,7 +288,7 @@ func (storage *DataStorage) GetGaugeValue(metricName string) (float64, error) {
 	}
 }
 
-func (storage *DataStorage) GetCounterValue(metricName string) (uint64, error) {
+func (storage *FileStorage) GetCounterValue(metricName string) (uint64, error) {
 	if metricName == "" {
 		return 0, errors.New("DataStorage: GetCounterValue: metricName should be not empty")
 	}
@@ -299,7 +303,7 @@ func (storage *DataStorage) GetCounterValue(metricName string) (uint64, error) {
 	}
 }
 
-func (storage *DataStorage) GetStats() (map[string]float64, map[string]uint64, error) {
+func (storage *FileStorage) GetStats() (map[string]float64, map[string]uint64, error) {
 	responceChan := make(chan CollectedDataResponce, 1)
 	storage.RequestChan <- CollectedDataRequest{responceChan}
 	responce := <-responceChan

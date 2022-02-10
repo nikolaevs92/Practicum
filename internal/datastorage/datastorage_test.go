@@ -33,7 +33,7 @@ func TestGetUpdateErrors(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	storage := New(StorageConfig{})
+	storage := NewFileStorage(StorageConfig{})
 	go storage.RunReciver(ctx)
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
