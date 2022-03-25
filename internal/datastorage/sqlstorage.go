@@ -130,7 +130,6 @@ func (storage *SQLStorage) RunReciver(end context.Context) {
 	if err != nil {
 		panic(err)
 	}
-
 	<-storage.ctx.Done()
 }
 
