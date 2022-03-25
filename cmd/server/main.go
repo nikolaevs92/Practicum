@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+	log.Println("FINDME")
 	adress := pflag.StringP("adress", "a", config.DefaultServer, "")
 	storeInterval := pflag.DurationP("strore-interval", "i", config.DefaultStoreInterval, "")
 	storeFile := pflag.StringP("store-file", "f", config.DefaultStoreFile, "")
