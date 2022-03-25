@@ -78,6 +78,7 @@ func TestJSONHandler(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cfg := config.LoadConfig()
+	cfg.Server.StoreFile = "./.data"
 	go func() {
 		<-cancelChan
 		cancel()
