@@ -28,8 +28,8 @@ func main() {
 	v.AutomaticEnv()
 
 	cfg := config.NewServerConfigWithDefaults(v, *adress, *storeInterval, *storeFile, *restore, *key, *dataBaseDSN, *dataBaseType)
-	log.Panicln("DSN: " + cfg.DataBaseDSN)
-	log.Panicln("server: " + cfg.Server)
+	log.Println("DSN: " + cfg.DataBaseDSN)
+	log.Println("server: " + cfg.Server)
 	dataServer := server.New(*cfg)
 	cancelChan := make(chan os.Signal, 1)
 
