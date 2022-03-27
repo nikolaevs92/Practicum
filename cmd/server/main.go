@@ -21,7 +21,7 @@ func main() {
 	restore := pflag.BoolP("restore", "r", config.DefaultRestore, "")
 	key := pflag.StringP("key", "k", "", "")
 	dataBaseDSN := pflag.StringP("db-dsn", "d", "", "")
-	dataBaseType := pflag.StringP("db-type", "t", "pq", "")
+	dataBaseType := pflag.StringP("db-type", "t", config.DefaultDataBaseType, "")
 	pflag.Parse()
 
 	v := viper.New()
