@@ -134,9 +134,15 @@ func (storage *SQLStorage) RunReciver(end context.Context) {
 }
 
 func (storage *SQLStorage) Ping() bool {
+	db, err := sql.Open(storage.cfg.DBType, storage.cfg.DataBaseDSN)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
-	err := storage.DB.PingContext(ctx)
+	err = db.PingContext(ctx)
 	return err == nil
 }
 
