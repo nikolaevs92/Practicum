@@ -218,7 +218,9 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 	r.Get("/", MakeGetHomeHandler(dataStorage))
 	r.Get("/ping", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("content-type", "text/plain; charset=utf-8")
-		if dataStorage.Ping() {
+		ok := dataStorage.Ping()
+		log.Println("is ping", ok)
+		if ok {
 			rw.WriteHeader(http.StatusOK)
 		} else {
 			rw.WriteHeader(http.StatusInternalServerError)
