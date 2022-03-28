@@ -23,7 +23,7 @@ type DataBase interface {
 	GetCounterValue(string) (uint64, error)
 	GetStats() (map[string]float64, map[string]uint64, error)
 	Init()
-	RunReciver(context.Context)
+	RunReciver(context.Context) error
 	GetJSONUpdate([]byte) error
 	GetJSONValue([]byte) ([]byte, error)
 	Ping() bool
@@ -292,10 +292,10 @@ func (dataServer *DataServer) Init() {
 func New(config Config) *DataServer {
 	server := new(DataServer)
 	server.Server = config.Server
-	if config.StoreFile != "" {
-		server.DataHolder = datastorage.NewFileStorage(config.StorageConfig)
-	} else if config.DataBaseDSN != "" {
+	if config.DataBaseDSN != "" {
 		server.DataHolder = datastorage.NewSQLStorage(config.StorageConfig)
+	} else {
+		server.DataHolder = datastorage.NewFileStorage(config.StorageConfig)
 	}
 	server.Init()
 	return server
