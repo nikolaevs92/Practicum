@@ -119,11 +119,12 @@ func (storage *SQLStorage) RunReciver(end context.Context) {
 	storage.ctx = end
 
 	db, err := sql.Open(storage.cfg.DBType, storage.cfg.DataBaseDSN)
+	storage.DB = db
 	if err != nil {
 		log.Println("sql arent opened")
 		log.Println(err)
+		return
 	}
-	storage.DB = db
 	defer db.Close()
 
 	// create table
@@ -131,6 +132,7 @@ func (storage *SQLStorage) RunReciver(end context.Context) {
 	if err != nil {
 		log.Println("table arent created")
 		log.Println(err)
+		return
 	}
 	<-storage.ctx.Done()
 }
