@@ -115,8 +115,15 @@ func (storage *SQLStorage) GetStats() (map[string]float64, map[string]uint64, er
 func (storage *SQLStorage) Init() {
 }
 
-func (storage *SQLStorage) RunReciver(end context.Context) error {
-	storage.ctx = end
+func (storage *SQLStorage) TestRun() error {
+	switch storage.cfg.DBType {
+	case "sqlite3":
+		log.Println("sqlite run")
+	case "pq":
+		log.Println("postgres run")
+	default:
+		return errors.New("wrong storage type")
+	}
 
 	db, err := sql.Open(storage.cfg.DBType, storage.cfg.DataBaseDSN)
 	if err != nil {
@@ -130,8 +137,27 @@ func (storage *SQLStorage) RunReciver(end context.Context) error {
 	if err != nil {
 		return err
 	}
-	<-storage.ctx.Done()
 	return nil
+}
+
+func (storage *SQLStorage) RunReciver(end context.Context) {
+	storage.ctx = end
+
+	db, err := sql.Open(storage.cfg.DBType, storage.cfg.DataBaseDSN)
+	if err != nil {
+		log.Println("sql arent opened")
+		log.Println(err)
+	}
+	storage.DB = db
+	defer db.Close()
+
+	// create table
+	_, err = storage.DB.ExecContext(storage.ctx, "CREATE TABLE IF NOT EXISTS data ( ID text PRIMARY KEY, MType text, Delta integer, Value double precision )")
+	if err != nil {
+		log.Println("table arent created")
+		log.Println(err)
+	}
+	<-storage.ctx.Done()
 }
 
 func (storage *SQLStorage) Ping() bool {
@@ -144,7 +170,7 @@ func (storage *SQLStorage) Ping() bool {
 func (storage *SQLStorage) GetJSONUpdate(jsonDump []byte) error {
 	metrics := Metrics{}
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
-		panic(err)
+		return err
 	}
 
 	metricsHash, _ := metrics.CalcHash(storage.cfg.Key)
@@ -159,7 +185,7 @@ func (storage *SQLStorage) GetJSONUpdate(jsonDump []byte) error {
 func (storage *SQLStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 	metrics := Metrics{}
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	switch metrics.MType {

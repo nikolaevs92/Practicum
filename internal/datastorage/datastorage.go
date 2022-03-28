@@ -151,7 +151,7 @@ func NewFileStorage(cfg StorageConfig) *FileStorage {
 	return dataStorage
 }
 
-func (storage *FileStorage) RunReciver(end context.Context) error {
+func (storage *FileStorage) RunReciver(end context.Context) {
 	log.Println("Start Reciver")
 	var storeTimer *time.Ticker
 	if storage.cfg.StoreInterval > 0 {
@@ -181,7 +181,7 @@ func (storage *FileStorage) RunReciver(end context.Context) error {
 			_ = storage.StoreData(t)
 		case <-end.Done():
 			log.Println("End Reciver")
-			return nil
+			return
 		}
 	}
 }

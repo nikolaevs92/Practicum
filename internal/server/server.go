@@ -23,7 +23,7 @@ type DataBase interface {
 	GetCounterValue(string) (uint64, error)
 	GetStats() (map[string]float64, map[string]uint64, error)
 	Init()
-	RunReciver(context.Context) error
+	RunReciver(context.Context)
 	GetJSONUpdate([]byte) error
 	GetJSONValue([]byte) ([]byte, error)
 	Ping() bool
