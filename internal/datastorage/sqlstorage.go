@@ -19,7 +19,7 @@ type SQLStorage struct {
 	DB  *sql.DB
 }
 
-func NewSQLStorage(cfg StorageConfig) *DataBase {
+func NewSQLStorage(cfg StorageConfig) *SQLStorage {
 	dataStorage := new(SQLStorage)
 	dataStorage.cfg = cfg
 	return dataStorage
