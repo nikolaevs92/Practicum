@@ -292,7 +292,7 @@ func (dataServer *DataServer) Init() {
 func New(config Config) *DataServer {
 	server := new(DataServer)
 	server.Server = config.Server
-	if config.DataBaseDSN == "" {
+	if config.StoreFile == "" {
 		server.DataHolder = datastorage.NewFileStorage(config.StorageConfig)
 	} else {
 		server.DataHolder = datastorage.NewSQLStorage(config.StorageConfig)
