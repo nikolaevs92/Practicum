@@ -115,31 +115,6 @@ func (storage *SQLStorage) GetStats() (map[string]float64, map[string]uint64, er
 func (storage *SQLStorage) Init() {
 }
 
-func (storage *SQLStorage) TestRun() error {
-	switch storage.cfg.DBType {
-	case "sqlite3":
-		log.Println("sqlite run")
-	case "pq":
-		log.Println("postgres run")
-	default:
-		return errors.New("wrong storage type")
-	}
-
-	db, err := sql.Open(storage.cfg.DBType, storage.cfg.DataBaseDSN)
-	if err != nil {
-		return err
-	}
-	storage.DB = db
-	defer db.Close()
-
-	// create table
-	_, err = storage.DB.ExecContext(storage.ctx, "CREATE TABLE IF NOT EXISTS data ( ID text PRIMARY KEY, MType text PRIMARY KEY, Delta integer, Value double precision )")
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (storage *SQLStorage) RunReciver(end context.Context) {
 	storage.ctx = end
 
