@@ -19,7 +19,7 @@ const (
 	DefaultServer         = "127.0.0.1:8080"
 	DefaultKey            = ""
 	DefaultDataBaseDSN    = ""
-	DefaultDataBaseType   = "pq"
+	DefaultDataBaseType   = "postgres"
 )
 
 const (

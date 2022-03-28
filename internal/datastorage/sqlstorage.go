@@ -30,7 +30,7 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 	switch storage.cfg.DBType {
 	case "sqlite3":
 		queryTemplate = "INSERT INTO data VALUES(?, ?, ?, ?) ON CONFLICT (ID, MType) DO UPDATE Delta = ?, Value = ?;"
-	case "pq":
+	case "postgres":
 		queryTemplate = "INSERT INTO data VALUES($N, $N, $N, $N) ON CONFLICT (ID, MType) DO UPDATE Delta = $N, Value = $N;"
 	}
 
@@ -75,7 +75,7 @@ func (storage *SQLStorage) GetGaugeValue(metricName string) (float64, error) {
 	switch storage.cfg.DBType {
 	case "sqlite3":
 		queryTemplate = "SELECT Value FROM data WHERE ID = ? and MType = gauge limit 1;"
-	case "pq":
+	case "postgres":
 		queryTemplate = "SELECT Value FROM data WHERE ID = $N and MType = gauge limit 1;"
 	}
 
@@ -94,7 +94,7 @@ func (storage *SQLStorage) GetCounterValue(metricName string) (uint64, error) {
 	switch storage.cfg.DBType {
 	case "sqlite3":
 		queryTemplate = "SELECT Value FROM data WHERE ID = ? and MType = counter limit 1;"
-	case "pq":
+	case "postgres":
 		queryTemplate = "SELECT Value FROM data WHERE ID = $N and MType = counter limit 1;"
 	}
 
