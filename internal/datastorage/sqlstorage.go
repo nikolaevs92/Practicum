@@ -104,9 +104,9 @@ func (storage *SQLStorage) GetCounterValue(metricName string) (uint64, error) {
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "SELECT Value FROM data WHERE ID = ? and MType = counter limit 1;"
+		queryTemplate = "SELECT Delta FROM data WHERE ID = ? and MType = \"counter\" limit 1;"
 	case "postgres":
-		queryTemplate = "SELECT Value FROM data WHERE ID = $N and MType = counter limit 1;"
+		queryTemplate = "SELECT Delta FROM data WHERE ID = $N and MType = \"counter\" limit 1;"
 	}
 
 	row := storage.DB.QueryRowContext(storage.ctx, queryTemplate, metricName)
