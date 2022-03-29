@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -40,20 +41,30 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 		if err != nil {
 			return errors.New("DataStorage: GetUpdate: error whith parsing gauge metricValue: ") // + err.GetString())
 		}
-		_, err = storage.DB.ExecContext(storage.ctx, queryTemplate, metricName, metricType, 0, value, 0, value)
+		res, err := storage.DB.ExecContext(storage.ctx, queryTemplate, metricName, metricType, 0, value, 0, value)
 		if err != nil {
 			return errors.New("DataStorage: GetUpdate: error whith upsert to DB: ") // + err.GetString())
 		}
+		count, err := res.RowsAffected()
+		if err != nil {
+			log.Println(err)
+		}
+		fmt.Println(count)
 
 	case CounterTypeName:
 		value, err := strconv.ParseUint(metricValue, 10, 64)
 		if err != nil {
 			return errors.New("DataStorage: GetUpdate: error whith parsing counter metricValue: ") // + err.GetString())
 		}
-		_, err = storage.DB.ExecContext(storage.ctx, queryTemplate, metricName, metricType, value, 0, value, 0)
+		res, err := storage.DB.ExecContext(storage.ctx, queryTemplate, metricName, metricType, value, 0, value, 0)
 		if err != nil {
 			return errors.New("DataStorage: GetUpdate: error whith upsert to DB: ") // + err.GetString())
 		}
+		count, err := res.RowsAffected()
+		if err != nil {
+			log.Println(err)
+		}
+		fmt.Println(count)
 	default:
 		return errors.New(
 			"DataStorage: GetUpdate: invalid metricType value, valid values: " + GaugeTypeName + ", " + CounterTypeName)
@@ -74,9 +85,9 @@ func (storage *SQLStorage) GetGaugeValue(metricName string) (float64, error) {
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "SELECT Value FROM data WHERE ID = ? and MType = gauge limit 1;"
+		queryTemplate = "SELECT Value FROM data WHERE ID = ? and MType = \"gauge\" limit 1;"
 	case "postgres":
-		queryTemplate = "SELECT Value FROM data WHERE ID = $N and MType = gauge limit 1;"
+		queryTemplate = "SELECT Value FROM data WHERE ID = $N and MType = \"gauge\" limit 1;"
 	}
 
 	row := storage.DB.QueryRowContext(storage.ctx, queryTemplate, metricName)
