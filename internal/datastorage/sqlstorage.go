@@ -40,11 +40,11 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 	case GaugeTypeName:
 		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
-			return errors.New("DataStorage: GetUpdate: error whith parsing gauge metricValue: ") // + err.GetString())
+			return errors.New("DataStorage: GetUpdate: error whith parsing gauge metricValue: " + err.Error())
 		}
 		res, err := storage.DB.ExecContext(storage.ctx, queryTemplate, metricName, metricType, 0, value, 0, value)
 		if err != nil {
-			return errors.New("DataStorage: GetUpdate: error whith upsert to DB: ") // + err.GetString())
+			return errors.New("DataStorage: GetUpdate: error whith upsert to DB: " + err.Error())
 		}
 		count, err := res.RowsAffected()
 		if err != nil {
@@ -55,11 +55,11 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 	case CounterTypeName:
 		value, err := strconv.ParseUint(metricValue, 10, 64)
 		if err != nil {
-			return errors.New("DataStorage: GetUpdate: error whith parsing counter metricValue: ") // + err.GetString())
+			return errors.New("DataStorage: GetUpdate: error whith parsing counter metricValue: " + err.Error())
 		}
 		res, err := storage.DB.ExecContext(storage.ctx, queryTemplate, metricName, metricType, value, 0, value, 0)
 		if err != nil {
-			return errors.New("DataStorage: GetUpdate: error whith upsert to DB: ") // + err.GetString())
+			return errors.New("DataStorage: GetUpdate: error whith upsert to DB: " + err.Error())
 		}
 		count, err := res.RowsAffected()
 		if err != nil {
@@ -141,7 +141,7 @@ func (storage *SQLStorage) RunReciver(end context.Context) {
 	defer db.Close()
 
 	// create table
-	_, err = storage.DB.ExecContext(storage.ctx, "CREATE TABLE IF NOT EXISTS data ( ID text PRIMARY KEY, MType text, Delta BIGINT, Value double precision )")
+	_, err = storage.DB.ExecContext(storage.ctx, "CREATE TABLE IF NOT EXISTS data ( ID text PRIMARY KEY, MType text, Delta bigserial, Value double precision )")
 	if err != nil {
 		log.Println("table arent created")
 		log.Println(err)
