@@ -63,6 +63,7 @@ func gzipHandle(next http.Handler) http.Handler {
 
 func MakeHandlerJSONUpdate(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
+		log.Println("get json update")
 		rw.Header().Set("content-type", "application/json")
 		body, err := io.ReadAll(req.Body)
 		if err != nil {
@@ -103,6 +104,7 @@ func MakeHandlerJSONValue(data DataBase) http.HandlerFunc {
 
 func MakeHandlerUpdate(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
+		log.Println("get update")
 		rw.Header().Set("content-type", "text/plain; charset=utf-8")
 		metricType := chi.URLParam(req, "metricType")
 		metricName := chi.URLParam(req, "metricName")
@@ -126,6 +128,7 @@ func MakeHandlerUpdate(data DataBase) http.HandlerFunc {
 		if err == nil {
 			rw.WriteHeader(http.StatusOK)
 		} else {
+			log.Println(err)
 			rw.WriteHeader(http.StatusBadRequest)
 		}
 		rw.Write(body)
@@ -218,7 +221,9 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 	r.Get("/", MakeGetHomeHandler(dataStorage))
 	r.Get("/ping", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("content-type", "text/plain; charset=utf-8")
-		if dataStorage.Ping() {
+		ok := dataStorage.Ping()
+		log.Println("is ping", ok)
+		if ok {
 			rw.WriteHeader(http.StatusOK)
 		} else {
 			rw.WriteHeader(http.StatusInternalServerError)
@@ -292,10 +297,10 @@ func (dataServer *DataServer) Init() {
 func New(config Config) *DataServer {
 	server := new(DataServer)
 	server.Server = config.Server
-	if config.DataBaseDSN == "" {
-		server.DataHolder = datastorage.NewFileStorage(config.StorageConfig)
-	} else {
+	if config.DataBaseDSN != "" {
 		server.DataHolder = datastorage.NewSQLStorage(config.StorageConfig)
+	} else {
+		server.DataHolder = datastorage.NewFileStorage(config.StorageConfig)
 	}
 	server.Init()
 	return server
