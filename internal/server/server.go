@@ -298,7 +298,7 @@ func New(config Config) *DataServer {
 	server := new(DataServer)
 	server.Server = config.Server
 	if config.DataBaseDSN != "" {
-		server.DataHolder = datastorage.NewSQLStorage(config.StorageConfig)
+		server.DataHolder = datastorage.NewFileStorage(config.StorageConfig)
 	} else {
 		server.DataHolder = datastorage.NewFileStorage(config.StorageConfig)
 	}

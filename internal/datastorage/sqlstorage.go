@@ -60,7 +60,7 @@ func (storage *SQLStorage) GetArrayUpdate(metrics *[]Metrics) error {
 }
 
 func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metricValue string) error {
-	log.Println("Update start")
+	log.Printf("Update start: ID:%v MType:%v Value:%s\n", metricName, metricType, metricValue)
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
@@ -73,10 +73,12 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 	case GaugeTypeName:
 		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
+			log.Println("DataStorage: GetUpdate: error whith parsing gauge metricValue: " + err.Error())
 			return errors.New("DataStorage: GetUpdate: error whith parsing gauge metricValue: " + err.Error())
 		}
 		res, err := storage.DB.ExecContext(storage.ctx, queryTemplate, metricName, metricType, 0, value, 0, value)
 		if err != nil {
+			log.Println("DataStorage: GetUpdate: error whith upsert to DB: " + err.Error())
 			return errors.New("DataStorage: GetUpdate: error whith upsert to DB: " + err.Error())
 		}
 		count, err := res.RowsAffected()
@@ -88,10 +90,12 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 	case CounterTypeName:
 		value, err := strconv.ParseUint(metricValue, 10, 64)
 		if err != nil {
+			log.Println("DataStorage: GetUpdate: error whith parsing gauge metricValue: " + err.Error())
 			return errors.New("DataStorage: GetUpdate: error whith parsing counter metricValue: " + err.Error())
 		}
 		res, err := storage.DB.ExecContext(storage.ctx, queryTemplate, metricName, metricType, value, 0, value, 0)
 		if err != nil {
+			log.Println("DataStorage: GetUpdate: error whith upsert to DB: " + err.Error())
 			return errors.New("DataStorage: GetUpdate: error whith upsert to DB: " + err.Error())
 		}
 		count, err := res.RowsAffected()
@@ -100,6 +104,7 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 		}
 		fmt.Println(count)
 	default:
+		log.Println("DataStorage: GetUpdate: invalid metricType value: " + metricType + ", valid values: " + GaugeTypeName + ", " + CounterTypeName)
 		return errors.New(
 			"DataStorage: GetUpdate: invalid metricType value, valid values: " + GaugeTypeName + ", " + CounterTypeName)
 	}
@@ -187,11 +192,14 @@ func (storage *SQLStorage) GetJSONUpdate(jsonDump []byte) error {
 	metricsArray := []Metrics{}
 	isArray := false
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
+		log.Println(err)
 		if err := json.Unmarshal(jsonDump, &metricsArray); err != nil {
+			log.Println(err)
 			return err
 		}
 		isArray = true
 	}
+	log.Println("json parsed")
 
 	if isArray {
 		for _, el := range metricsArray {
@@ -204,6 +212,7 @@ func (storage *SQLStorage) GetJSONUpdate(jsonDump []byte) error {
 
 		return storage.GetArrayUpdate(&metricsArray)
 	} else {
+		log.Println("StartUpdate" + metrics.String())
 		metricsHash, _ := metrics.CalcHash(storage.cfg.Key)
 		if storage.cfg.Key != "" && metricsHash != metrics.Hash {
 			log.Println("Wrong hash, " + metricsHash + " " + metrics.Hash)
