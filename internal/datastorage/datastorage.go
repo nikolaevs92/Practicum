@@ -235,6 +235,7 @@ func (storage *FileStorage) GetJSONUpdate(jsonDump []byte) error {
 		log.Println("Wrong hash, " + metricsHash + " " + metrics.Hash)
 		return errors.New("wrong hash")
 	}
+	log.Println("StartUpdate" + metrics.String())
 
 	return storage.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
 }

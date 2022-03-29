@@ -188,39 +188,53 @@ func (storage *SQLStorage) Ping() bool {
 }
 
 func (storage *SQLStorage) GetJSONUpdate(jsonDump []byte) error {
+
 	metrics := Metrics{}
-	metricsArray := []Metrics{}
-	isArray := false
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
-		log.Println(err)
-		if err := json.Unmarshal(jsonDump, &metricsArray); err != nil {
-			log.Println(err)
-			return err
-		}
-		isArray = true
+		panic(err)
 	}
-	log.Println("json parsed")
 
-	if isArray {
-		for _, el := range metricsArray {
-			metricsHash, _ := el.CalcHash(storage.cfg.Key)
-			if storage.cfg.Key != "" && metricsHash != el.Hash {
-				log.Println("Wrong hash, " + metricsHash + " " + el.Hash)
-				return errors.New("wrong hash")
-			}
-		}
-
-		return storage.GetArrayUpdate(&metricsArray)
-	} else {
-		log.Println("StartUpdate" + metrics.String())
-		metricsHash, _ := metrics.CalcHash(storage.cfg.Key)
-		if storage.cfg.Key != "" && metricsHash != metrics.Hash {
-			log.Println("Wrong hash, " + metricsHash + " " + metrics.Hash)
-			return errors.New("wrong hash")
-		}
-
-		return storage.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
+	metricsHash, _ := metrics.CalcHash(storage.cfg.Key)
+	if storage.cfg.Key != "" && metricsHash != metrics.Hash {
+		log.Println("Wrong hash, " + metricsHash + " " + metrics.Hash)
+		return errors.New("wrong hash")
 	}
+	log.Println("StartUpdate" + metrics.String())
+
+	return storage.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
+	// metrics := Metrics{}
+	// metricsArray := []Metrics{}
+	// isArray := false
+	// if err := json.Unmarshal(jsonDump, &metrics); err != nil {
+	// 	log.Println(err)
+	// 	if err := json.Unmarshal(jsonDump, &metricsArray); err != nil {
+	// 		log.Println(err)
+	// 		return err
+	// 	}
+	// 	isArray = true
+	// }
+	// log.Println("json parsed")
+
+	// if isArray {
+	// 	for _, el := range metricsArray {
+	// 		metricsHash, _ := el.CalcHash(storage.cfg.Key)
+	// 		if storage.cfg.Key != "" && metricsHash != el.Hash {
+	// 			log.Println("Wrong hash, " + metricsHash + " " + el.Hash)
+	// 			return errors.New("wrong hash")
+	// 		}
+	// 	}
+
+	// 	return storage.GetArrayUpdate(&metricsArray)
+	// } else {
+	// 	log.Println("StartUpdate" + metrics.String())
+	// 	metricsHash, _ := metrics.CalcHash(storage.cfg.Key)
+	// 	if storage.cfg.Key != "" && metricsHash != metrics.Hash {
+	// 		log.Println("Wrong hash, " + metricsHash + " " + metrics.Hash)
+	// 		return errors.New("wrong hash")
+	// 	}
+
+	// 	return storage.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
+	// }
 }
 
 func (storage *SQLStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
