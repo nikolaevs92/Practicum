@@ -31,9 +31,9 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "INSERT INTO data VALUES(?, ?, ?, ?) ON CONFLICT (ID) DO UPDATE SET Delta = ?, Value = ?;"
+		queryTemplate = "INSERT INTO data3 VALUES(?, ?, ?, ?) ON CONFLICT (ID) DO UPDATE SET Delta = ?, Value = ?;"
 	case "postgres":
-		queryTemplate = "INSERT INTO data VALUES($1, $2, $3, $4) ON CONFLICT (ID) DO UPDATE SET Delta = $5, Value = $6;"
+		queryTemplate = "INSERT INTO data3 VALUES($1, $2, $3, $4) ON CONFLICT (ID) DO UPDATE SET Delta = $5, Value = $6;"
 	}
 
 	switch metricType {
@@ -86,9 +86,9 @@ func (storage *SQLStorage) GetGaugeValue(metricName string) (float64, error) {
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "SELECT Value FROM data WHERE ID = ? and MType ? limit 1;"
+		queryTemplate = "SELECT Value FROM data3 WHERE ID = ? and MType ? limit 1;"
 	case "postgres":
-		queryTemplate = "SELECT Value FROM data WHERE ID = $1 and MType $2 limit 1;"
+		queryTemplate = "SELECT Value FROM data3 WHERE ID = $1 and MType $2 limit 1;"
 	}
 
 	row := storage.DB.QueryRowContext(storage.ctx, queryTemplate, metricName, "gauge")
@@ -105,9 +105,9 @@ func (storage *SQLStorage) GetCounterValue(metricName string) (uint64, error) {
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "SELECT Delta FROM data WHERE ID = ? and MType = ? limit 1;"
+		queryTemplate = "SELECT Delta FROM data3 WHERE ID = ? and MType = ? limit 1;"
 	case "postgres":
-		queryTemplate = "SELECT Delta FROM data WHERE ID = $1 and MType = $2 limit 1;"
+		queryTemplate = "SELECT Delta FROM data3 WHERE ID = $1 and MType = $2 limit 1;"
 	}
 
 	row := storage.DB.QueryRowContext(storage.ctx, queryTemplate, metricName, "counter")
@@ -141,7 +141,7 @@ func (storage *SQLStorage) RunReciver(end context.Context) {
 	defer db.Close()
 
 	// create table
-	_, err = storage.DB.ExecContext(storage.ctx, "CREATE TABLE IF NOT EXISTS data ( ID text PRIMARY KEY, MType text, Delta bigserial, Value double precision )")
+	_, err = storage.DB.ExecContext(storage.ctx, "CREATE TABLE IF NOT EXISTS data3 ( ID text PRIMARY KEY, MType text, Delta bigserial, Value double precision )")
 	if err != nil {
 		log.Println("table arent created")
 		log.Println(err)
