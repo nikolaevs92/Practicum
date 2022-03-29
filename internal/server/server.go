@@ -63,6 +63,7 @@ func gzipHandle(next http.Handler) http.Handler {
 
 func MakeHandlerJSONUpdate(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
+		log.Println("get json update")
 		rw.Header().Set("content-type", "application/json")
 		body, err := io.ReadAll(req.Body)
 		if err != nil {
@@ -103,6 +104,7 @@ func MakeHandlerJSONValue(data DataBase) http.HandlerFunc {
 
 func MakeHandlerUpdate(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
+		log.Println("get update")
 		rw.Header().Set("content-type", "text/plain; charset=utf-8")
 		metricType := chi.URLParam(req, "metricType")
 		metricName := chi.URLParam(req, "metricName")
@@ -126,6 +128,7 @@ func MakeHandlerUpdate(data DataBase) http.HandlerFunc {
 		if err == nil {
 			rw.WriteHeader(http.StatusOK)
 		} else {
+			log.Println(err)
 			rw.WriteHeader(http.StatusBadRequest)
 		}
 		rw.Write(body)

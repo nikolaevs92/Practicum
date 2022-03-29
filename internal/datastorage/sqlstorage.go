@@ -33,7 +33,7 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 	case "sqlite3":
 		queryTemplate = "INSERT INTO data VALUES(?, ?, ?, ?) ON CONFLICT (ID) DO UPDATE SET Delta = ?, Value = ?;"
 	case "postgres":
-		queryTemplate = "INSERT INTO data VALUES($N, $N, $N, $N) ON CONFLICT (ID) DO UPDATE SET Delta = $N, Value = $N;"
+		queryTemplate = "INSERT INTO data VALUES($1, $2, $3, $4) ON CONFLICT (ID) DO UPDATE SET Delta = $5, Value = $6;"
 	}
 
 	switch metricType {
@@ -83,9 +83,15 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 }
 
 func (storage *SQLStorage) GetGaugeValue(metricName string) (float64, error) {
-	query := "SELECT Value FROM data WHERE ID = " + metricName + " and MType = \"gauge\" limit 1;"
+	var queryTemplate string
+	switch storage.cfg.DBType {
+	case "sqlite3":
+		queryTemplate = "SELECT Value FROM data WHERE ID = ? and MType ? limit 1;"
+	case "postgres":
+		queryTemplate = "SELECT Value FROM data WHERE ID = $1 and MType $2 limit 1;"
+	}
 
-	row := storage.DB.QueryRowContext(storage.ctx, query)
+	row := storage.DB.QueryRowContext(storage.ctx, queryTemplate, metricName, "gauge")
 	var res float64
 	err := row.Scan(&res)
 	if err != nil {
@@ -96,12 +102,20 @@ func (storage *SQLStorage) GetGaugeValue(metricName string) (float64, error) {
 }
 
 func (storage *SQLStorage) GetCounterValue(metricName string) (uint64, error) {
-	query := "SELECT Value FROM data WHERE ID = \"" + metricName + "\" and MType = \"counter\" limit 1;"
+	var queryTemplate string
+	switch storage.cfg.DBType {
+	case "sqlite3":
+		queryTemplate = "SELECT Value FROM data WHERE ID = ? and MType = ? limit 1;"
+	case "postgres":
+		queryTemplate = "SELECT Value FROM data WHERE ID = $1 and MType = $2 limit 1;"
+	}
 
-	row := storage.DB.QueryRowContext(storage.ctx, query, metricName)
+	row := storage.DB.QueryRowContext(storage.ctx, queryTemplate, metricName, "counter")
+	// row := storage.DB.QueryRowContext(storage.ctx, "SELECT Value FROM data WHERE ID = asd and MType counter limit 1;")
 	var res uint64
 	err := row.Scan(&res)
 	if err != nil {
+		log.Println(err)
 		return 0, errors.New("no data")
 	}
 
