@@ -27,6 +27,7 @@ func NewSQLStorage(cfg StorageConfig) *SQLStorage {
 }
 
 func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metricValue string) error {
+	log.Println("Update start")
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
@@ -82,15 +83,9 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 }
 
 func (storage *SQLStorage) GetGaugeValue(metricName string) (float64, error) {
-	var queryTemplate string
-	switch storage.cfg.DBType {
-	case "sqlite3":
-		queryTemplate = "SELECT Value FROM data WHERE ID = ? and MType = \"gauge\" limit 1;"
-	case "postgres":
-		queryTemplate = "SELECT Value FROM data WHERE ID = $N and MType = \"gauge\" limit 1;"
-	}
+	query := "SELECT Value FROM data WHERE ID = " + metricName + " and MType = \"gauge\" limit 1;"
 
-	row := storage.DB.QueryRowContext(storage.ctx, queryTemplate, metricName)
+	row := storage.DB.QueryRowContext(storage.ctx, query)
 	var res float64
 	err := row.Scan(&res)
 	if err != nil {
@@ -101,15 +96,9 @@ func (storage *SQLStorage) GetGaugeValue(metricName string) (float64, error) {
 }
 
 func (storage *SQLStorage) GetCounterValue(metricName string) (uint64, error) {
-	var queryTemplate string
-	switch storage.cfg.DBType {
-	case "sqlite3":
-		queryTemplate = "SELECT Delta FROM data WHERE ID = ? and MType = \"counter\" limit 1;"
-	case "postgres":
-		queryTemplate = "SELECT Delta FROM data WHERE ID = $N and MType = \"counter\" limit 1;"
-	}
+	query := "SELECT Value FROM data WHERE ID = \"" + metricName + "\" and MType = \"counter\" limit 1;"
 
-	row := storage.DB.QueryRowContext(storage.ctx, queryTemplate, metricName)
+	row := storage.DB.QueryRowContext(storage.ctx, query, metricName)
 	var res uint64
 	err := row.Scan(&res)
 	if err != nil {
