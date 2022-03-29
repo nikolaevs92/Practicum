@@ -27,8 +27,10 @@ func NewSQLStorage(cfg StorageConfig) *SQLStorage {
 }
 
 func (storage *SQLStorage) GetArrayUpdate(metrics *[]Metrics) error {
+	log.Println("Start butch update")
 	tx, err := storage.DB.Begin()
 	if err != nil {
+		log.Println("Transaxtion didnt started: " + err.Error())
 		return err
 	}
 	// шаг 1.1 — если возникает ошибка, откатываем изменения
@@ -44,6 +46,7 @@ func (storage *SQLStorage) GetArrayUpdate(metrics *[]Metrics) error {
 	}
 	stmt, err := tx.PrepareContext(storage.ctx, queryTemplate)
 	if err != nil {
+		log.Println("Context didnt prepared: " + err.Error())
 		return err
 	}
 
@@ -52,6 +55,7 @@ func (storage *SQLStorage) GetArrayUpdate(metrics *[]Metrics) error {
 
 	for _, metric := range *metrics {
 		if _, err = stmt.ExecContext(storage.ctx, metric.ID, metric.MType, metric.Delta, metric.Value, metric.Delta, metric.Value); err != nil {
+			log.Println("Metric didnt insert: " + metric.String() + ". Error: " + err.Error())
 			return err
 		}
 	}
@@ -188,53 +192,39 @@ func (storage *SQLStorage) Ping() bool {
 }
 
 func (storage *SQLStorage) GetJSONUpdate(jsonDump []byte) error {
-
 	metrics := Metrics{}
+	metricsArray := []Metrics{}
+	isArray := false
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
-		panic(err)
+		log.Println(err)
+		if err := json.Unmarshal(jsonDump, &metricsArray); err != nil {
+			log.Println(err)
+			return err
+		}
+		isArray = true
 	}
+	log.Println("json parsed")
 
-	metricsHash, _ := metrics.CalcHash(storage.cfg.Key)
-	if storage.cfg.Key != "" && metricsHash != metrics.Hash {
-		log.Println("Wrong hash, " + metricsHash + " " + metrics.Hash)
-		return errors.New("wrong hash")
+	if isArray {
+		for _, el := range metricsArray {
+			metricsHash, _ := el.CalcHash(storage.cfg.Key)
+			if storage.cfg.Key != "" && metricsHash != el.Hash {
+				log.Println("Wrong hash, " + metricsHash + " " + el.Hash)
+				return errors.New("wrong hash")
+			}
+		}
+
+		return storage.GetArrayUpdate(&metricsArray)
+	} else {
+		log.Println("StartUpdate" + metrics.String())
+		metricsHash, _ := metrics.CalcHash(storage.cfg.Key)
+		if storage.cfg.Key != "" && metricsHash != metrics.Hash {
+			log.Println("Wrong hash, " + metricsHash + " " + metrics.Hash)
+			return errors.New("wrong hash")
+		}
+
+		return storage.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
 	}
-	log.Println("StartUpdate" + metrics.String())
-
-	return storage.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
-	// metrics := Metrics{}
-	// metricsArray := []Metrics{}
-	// isArray := false
-	// if err := json.Unmarshal(jsonDump, &metrics); err != nil {
-	// 	log.Println(err)
-	// 	if err := json.Unmarshal(jsonDump, &metricsArray); err != nil {
-	// 		log.Println(err)
-	// 		return err
-	// 	}
-	// 	isArray = true
-	// }
-	// log.Println("json parsed")
-
-	// if isArray {
-	// 	for _, el := range metricsArray {
-	// 		metricsHash, _ := el.CalcHash(storage.cfg.Key)
-	// 		if storage.cfg.Key != "" && metricsHash != el.Hash {
-	// 			log.Println("Wrong hash, " + metricsHash + " " + el.Hash)
-	// 			return errors.New("wrong hash")
-	// 		}
-	// 	}
-
-	// 	return storage.GetArrayUpdate(&metricsArray)
-	// } else {
-	// 	log.Println("StartUpdate" + metrics.String())
-	// 	metricsHash, _ := metrics.CalcHash(storage.cfg.Key)
-	// 	if storage.cfg.Key != "" && metricsHash != metrics.Hash {
-	// 		log.Println("Wrong hash, " + metricsHash + " " + metrics.Hash)
-	// 		return errors.New("wrong hash")
-	// 	}
-
-	// 	return storage.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
-	// }
 }
 
 func (storage *SQLStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
