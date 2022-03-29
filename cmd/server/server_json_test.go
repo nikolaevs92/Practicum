@@ -79,6 +79,8 @@ func TestJSONHandler(t *testing.T) {
 
 	cfg := config.LoadConfig()
 	cfg.Server.StoreFile = "./.data"
+	cfg.Server.DataBaseDSN = "./.sqldata"
+	cfg.Server.DBType = "sqlite3"
 	go func() {
 		<-cancelChan
 		cancel()
@@ -86,7 +88,7 @@ func TestJSONHandler(t *testing.T) {
 
 	for _, tt := range tests {
 
-		storage := datastorage.NewFileStorage(cfg.Server.StorageConfig)
+		storage := datastorage.NewSQLStorage(cfg.Server.StorageConfig)
 		storage.Init()
 		go storage.RunReciver(ctx)
 

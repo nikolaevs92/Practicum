@@ -29,9 +29,9 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "INSERT INTO data VALUES(?, ?, ?, ?) ON CONFLICT (ID, MType) DO UPDATE Delta = ?, Value = ?;"
+		queryTemplate = "INSERT INTO data VALUES(?, ?, ?, ?) ON CONFLICT (ID) DO UPDATE SET Delta = ?, Value = ?;"
 	case "postgres":
-		queryTemplate = "INSERT INTO data VALUES($N, $N, $N, $N) ON CONFLICT (ID, MType) DO UPDATE Delta = $N, Value = $N;"
+		queryTemplate = "INSERT INTO data VALUES($N, $N, $N, $N) ON CONFLICT (ID) DO UPDATE SET Delta = $N, Value = $N;"
 	}
 
 	switch metricType {
