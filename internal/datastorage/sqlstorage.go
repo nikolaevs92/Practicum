@@ -215,7 +215,7 @@ func (storage *SQLStorage) GetJSONUpdate(jsonDump []byte) error {
 	log.Println(string(jsonDump))
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
 		log.Println(err)
-		return err
+		return storage.GetJSONArray(jsonDump)
 	}
 	log.Println("json parsed")
 
