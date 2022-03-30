@@ -40,9 +40,9 @@ func (storage *SQLStorage) GetArrayUpdate(metrics *[]Metrics) error {
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "INSERT INTO statistics3 VALUES(?, ?, ?, ?) ON CONFLICT (ID) DO UPDATE SET Delta = ?, Value = ?;"
+		queryTemplate = "INSERT INTO statistics5 VALUES(?, ?, ?, ?) ON CONFLICT (ID, MType) DO UPDATE SET Delta = ?, Value = ?;"
 	case "postgres":
-		queryTemplate = "INSERT INTO statistics3 VALUES($1, $2, $3, $4) ON CONFLICT (ID) DO UPDATE SET Delta = $5, Value = $6;"
+		queryTemplate = "INSERT INTO statistics5 VALUES($1, $2, $3, $4) ON CONFLICT (ID, MType) DO UPDATE SET Delta = $5, Value = $6;"
 	}
 	stmt, err := tx.PrepareContext(storage.ctx, queryTemplate)
 	if err != nil {
@@ -69,9 +69,9 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "INSERT INTO statistics3 VALUES(?, ?, ?, ?) ON CONFLICT (ID, MType) DO UPDATE SET Delta = ?, Value = ?;"
+		queryTemplate = "INSERT INTO statistics5 VALUES(?, ?, ?, ?) ON CONFLICT (ID, MType) DO UPDATE SET Delta = ?, Value = ?;"
 	case "postgres":
-		queryTemplate = "INSERT INTO statistics3 VALUES($1, $2, $3, $4) ON CONFLICT (ID, MType) DO UPDATE SET Delta = $5, Value = $6;"
+		queryTemplate = "INSERT INTO statistics5 VALUES($1, $2, $3, $4) ON CONFLICT (ID, MType) DO UPDATE SET Delta = $5, Value = $6;"
 	}
 
 	switch metricType {
@@ -121,9 +121,9 @@ func (storage *SQLStorage) GetGaugeValue(metricName string) (float64, error) {
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "SELECT Value FROM statistics3 WHERE ID = ? and MType ? limit 1;"
+		queryTemplate = "SELECT Value FROM statistics5 WHERE ID = ? and MType ? limit 1;"
 	case "postgres":
-		queryTemplate = "SELECT Value FROM statistics3 WHERE ID = $1 and MType $2 limit 1;"
+		queryTemplate = "SELECT Value FROM statistics5 WHERE ID = $1 and MType $2 limit 1;"
 	}
 
 	row := storage.DB.QueryRowContext(storage.ctx, queryTemplate, metricName, "gauge")
@@ -140,9 +140,9 @@ func (storage *SQLStorage) GetCounterValue(metricName string) (uint64, error) {
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "SELECT Delta FROM statistics3 WHERE ID = ? and MType = ? limit 1;"
+		queryTemplate = "SELECT Delta FROM statistics5 WHERE ID = ? and MType = ? limit 1;"
 	case "postgres":
-		queryTemplate = "SELECT Delta FROM statistics3 WHERE ID = $1 and MType = $2 limit 1;"
+		queryTemplate = "SELECT Delta FROM statistics5 WHERE ID = $1 and MType = $2 limit 1;"
 	}
 
 	row := storage.DB.QueryRowContext(storage.ctx, queryTemplate, metricName, "counter")
@@ -176,7 +176,8 @@ func (storage *SQLStorage) RunReciver(end context.Context) {
 	defer db.Close()
 
 	// create table
-	_, err = storage.DB.ExecContext(storage.ctx, "CREATE TABLE IF NOT EXISTS statistics3 ( ID text, MType text, Delta bigserial, Value double precision, CONSTRAINT id_type_pk PRIMARY KEY (ID, MType))")
+	_, err = storage.DB.ExecContext(storage.ctx,
+		"CREATE TABLE IF NOT EXISTS statistics5 ( ID text, MType text, Delta bigserial, Value double precision, CONSTRAINT id_pk PRIMARY KEY (ID), CONSTRAINT id_type_uq UNIQUE (ID, MType));")
 	if err != nil {
 		log.Println("table arent created")
 		log.Println(err)
@@ -196,6 +197,7 @@ func (storage *SQLStorage) GetJSONUpdate(jsonDump []byte) error {
 	metrics := Metrics{}
 	metricsArray := []Metrics{}
 	isArray := false
+	log.Println(string(jsonDump))
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
 		log.Println(err)
 		if err := json.Unmarshal(jsonDump, &metricsArray); err != nil {

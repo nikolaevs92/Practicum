@@ -226,9 +226,13 @@ func (storage *FileStorage) GetUpdate(metricType string, metricName string, metr
 
 func (storage *FileStorage) GetJSONUpdate(jsonDump []byte) error {
 	metrics := Metrics{}
+
+	log.Println(string(jsonDump))
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
-		panic(err)
+		log.Println(err)
+		return err
 	}
+	log.Println("StartUpdate" + metrics.String())
 
 	metricsHash, _ := metrics.CalcHash(storage.cfg.Key)
 	if storage.cfg.Key != "" && metricsHash != metrics.Hash {
