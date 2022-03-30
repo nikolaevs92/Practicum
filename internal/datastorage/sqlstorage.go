@@ -40,9 +40,9 @@ func (storage *SQLStorage) GetArrayUpdate(metrics *[]Metrics) error {
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "INSERT INTO statistics5 VALUES(?, ?, ?, ?) ON CONFLICT (ID, MType) DO UPDATE SET Delta = ?, Value = ?;"
+		queryTemplate = "INSERT INTO statistics5 VALUES(?, ?, ?, ?) ON CONFLICT (ID, MType) DO UPDATE SET Delta = statistics5.Delta + ?, Value = ?;"
 	case "postgres":
-		queryTemplate = "INSERT INTO statistics5 VALUES($1, $2, $3, $4) ON CONFLICT (ID, MType) DO UPDATE SET Delta = $5, Value = $6;"
+		queryTemplate = "INSERT INTO statistics5 VALUES($1, $2, $3, $4) ON CONFLICT (ID, MType) DO UPDATE SET Delta = statistics5.Delta + $5, Value = $6;"
 	}
 	stmt, err := tx.PrepareContext(storage.ctx, queryTemplate)
 	if err != nil {
@@ -69,9 +69,9 @@ func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metri
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "INSERT INTO statistics5 VALUES(?, ?, ?, ?) ON CONFLICT (ID, MType) DO UPDATE SET Delta = ?, Value = ?;"
+		queryTemplate = "INSERT INTO statistics5 VALUES(?, ?, ?, ?) ON CONFLICT (ID, MType) DO UPDATE SET Delta = statistics5.Delta + ?, Value = ?;"
 	case "postgres":
-		queryTemplate = "INSERT INTO statistics5 VALUES($1, $2, $3, $4) ON CONFLICT (ID, MType) DO UPDATE SET Delta = $5, Value = $6;"
+		queryTemplate = "INSERT INTO statistics5 VALUES($1, $2, $3, $4) ON CONFLICT (ID, MType) DO UPDATE SET Delta = statistics5.Delta + $5, Value = $6;"
 	}
 
 	switch metricType {
