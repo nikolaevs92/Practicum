@@ -231,15 +231,18 @@ func (storage *SQLStorage) GetJSONUpdate(jsonDump []byte) error {
 }
 
 func (storage *SQLStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
+	log.Println("Get value request" + string(jsonDump))
 	metrics := Metrics{}
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
 		return nil, err
 	}
+	log.Println(metrics.String())
 
 	switch metrics.MType {
 	case GaugeTypeName:
 		value, err := storage.GetGaugeValue(metrics.ID)
 		if err != nil {
+			log.Println(err)
 			return jsonDump, err
 		}
 		metrics.Value = value
@@ -248,6 +251,7 @@ func (storage *SQLStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 	case CounterTypeName:
 		value, err := storage.GetCounterValue(metrics.ID)
 		if err != nil {
+			log.Println(err)
 			return jsonDump, err
 		}
 		metrics.Delta = value
