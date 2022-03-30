@@ -121,9 +121,9 @@ func (storage *SQLStorage) GetGaugeValue(metricName string) (float64, error) {
 	var queryTemplate string
 	switch storage.cfg.DBType {
 	case "sqlite3":
-		queryTemplate = "SELECT Value FROM statistics5 WHERE ID = ? and MType ? limit 1;"
+		queryTemplate = "SELECT Value FROM statistics5 WHERE ID = ? and MType = ? limit 1;"
 	case "postgres":
-		queryTemplate = "SELECT Value FROM statistics5 WHERE ID = $1 and MType $2 limit 1;"
+		queryTemplate = "SELECT Value FROM statistics5 WHERE ID = $1 and MType = $2 limit 1;"
 	}
 
 	row := storage.DB.QueryRowContext(storage.ctx, queryTemplate, metricName, "gauge")
