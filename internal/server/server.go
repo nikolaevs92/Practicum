@@ -25,6 +25,7 @@ type DataBase interface {
 	Init()
 	RunReciver(context.Context)
 	GetJSONUpdate([]byte) error
+	GetJSONArray([]byte) error
 	GetJSONValue([]byte) ([]byte, error)
 	Ping() bool
 }
@@ -71,6 +72,27 @@ func MakeHandlerJSONUpdate(data DataBase) http.HandlerFunc {
 			return
 		}
 		err = data.GetJSONUpdate(body)
+		if err != nil {
+			if err.Error() == "wrong hash" {
+				rw.WriteHeader(http.StatusBadRequest)
+			} else {
+				rw.WriteHeader(http.StatusNotFound)
+			}
+		}
+		rw.Write(body)
+	}
+}
+
+func MakeHandlerJSONArray(data DataBase) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		log.Println("get json update")
+		rw.Header().Set("content-type", "application/json")
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+		err = data.GetJSONArray(body)
 		if err != nil {
 			if err.Error() == "wrong hash" {
 				rw.WriteHeader(http.StatusBadRequest)
@@ -252,6 +274,10 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 			rw.WriteHeader(http.StatusBadRequest)
 			rw.Write(nil)
 		})
+	})
+
+	r.Route("/updates", func(r chi.Router) {
+		r.Post("/", MakeHandlerJSONArray(dataStorage))
 	})
 
 	r.Route("/update", func(r chi.Router) {
