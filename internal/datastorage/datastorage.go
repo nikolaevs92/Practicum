@@ -270,7 +270,8 @@ func (storage *FileStorage) GetJSONArray(jsonDump []byte) error {
 func (storage *FileStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 	metrics := Metrics{}
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
-		panic(err)
+		log.Println(err)
+		return jsonDump, err
 	}
 
 	switch metrics.MType {
