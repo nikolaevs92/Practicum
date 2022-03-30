@@ -234,6 +234,7 @@ func (storage *SQLStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {
 	log.Println("Get value request" + string(jsonDump))
 	metrics := Metrics{}
 	if err := json.Unmarshal(jsonDump, &metrics); err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	log.Println(metrics.String())
