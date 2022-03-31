@@ -100,7 +100,7 @@ func MakeHandlerJSONArray(data DataBase) http.HandlerFunc {
 				rw.WriteHeader(http.StatusNotFound)
 			}
 		}
-		rw.Write(body)
+		rw.Write(nil)
 	}
 }
 
