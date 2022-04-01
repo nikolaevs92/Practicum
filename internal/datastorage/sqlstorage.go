@@ -26,14 +26,14 @@ func NewSQLStorage(cfg StorageConfig) *SQLStorage {
 	return dataStorage
 }
 
-func (storage *SQLStorage) GetJSONArray(jsonDump []byte) error {
+func (storage *SQLStorage) GetJSONArray(jsonDump []byte) ([]byte, error) {
 	log.Println("Start butch update")
 
 	metricsArray := []Metrics{}
 	log.Println(string(jsonDump))
 	if err := json.Unmarshal(jsonDump, &metricsArray); err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
 	log.Println("json parsed")
 
@@ -41,14 +41,14 @@ func (storage *SQLStorage) GetJSONArray(jsonDump []byte) error {
 		metricsHash, _ := el.CalcHash(storage.cfg.Key)
 		if storage.cfg.Key != "" && metricsHash != el.Hash {
 			log.Println("Wrong hash, " + metricsHash + " " + el.Hash)
-			return errors.New("wrong hash")
+			return nil, errors.New("wrong hash")
 		}
 	}
 
 	tx, err := storage.DB.Begin()
 	if err != nil {
 		log.Println("Transaxtion didnt started: " + err.Error())
-		return err
+		return nil, err
 	}
 	// шаг 1.1 — если возникает ошибка, откатываем изменения
 	defer tx.Rollback()
@@ -64,7 +64,7 @@ func (storage *SQLStorage) GetJSONArray(jsonDump []byte) error {
 	stmt, err := tx.PrepareContext(storage.ctx, queryTemplate)
 	if err != nil {
 		log.Println("Context didnt prepared: " + err.Error())
-		return err
+		return nil, err
 	}
 
 	// шаг 2.1 — не забываем закрыть инструкцию, когда она больше не нужна
@@ -74,11 +74,13 @@ func (storage *SQLStorage) GetJSONArray(jsonDump []byte) error {
 		log.Println("insert metric: " + metric.String())
 		if _, err = stmt.ExecContext(storage.ctx, metric.ID, metric.MType, metric.Delta, metric.Value, metric.Delta, metric.Value); err != nil {
 			log.Println("Metric didnt insert: " + metric.String() + ". Error: " + err.Error())
-			return err
+			return nil, err
 		}
 	}
-
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	return metricsArray[0].MarshalJSON()
 }
 
 func (storage *SQLStorage) GetUpdate(metricType string, metricName string, metricValue string) error {

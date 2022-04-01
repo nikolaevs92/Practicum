@@ -244,27 +244,27 @@ func (storage *FileStorage) GetJSONUpdate(jsonDump []byte) error {
 	return storage.GetUpdate(metrics.MType, metrics.ID, metrics.GetStrValue())
 }
 
-func (storage *FileStorage) GetJSONArray(jsonDump []byte) error {
+func (storage *FileStorage) GetJSONArray(jsonDump []byte) ([]byte, error) {
 	metricsArray := []Metrics{}
 
 	log.Println(string(jsonDump))
 	if err := json.Unmarshal(jsonDump, &metricsArray); err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
 
 	for _, el := range metricsArray {
 		metricsHash, _ := el.CalcHash(storage.cfg.Key)
 		if storage.cfg.Key != "" && metricsHash != el.Hash {
 			log.Println("Wrong hash, " + metricsHash + " " + el.Hash)
-			return errors.New("wrong hash")
+			return nil, errors.New("wrong hash")
 		}
 	}
 
 	for _, el := range metricsArray {
 		_ = storage.GetUpdate(el.MType, el.ID, el.GetStrValue())
 	}
-	return nil
+	return metricsArray[0].MarshalJSON()
 }
 
 func (storage *FileStorage) GetJSONValue(jsonDump []byte) ([]byte, error) {

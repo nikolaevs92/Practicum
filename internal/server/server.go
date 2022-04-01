@@ -25,7 +25,7 @@ type DataBase interface {
 	Init()
 	RunReciver(context.Context)
 	GetJSONUpdate([]byte) error
-	GetJSONArray([]byte) error
+	GetJSONArray([]byte) ([]byte, error)
 	GetJSONValue([]byte) ([]byte, error)
 	Ping() bool
 }
@@ -92,7 +92,7 @@ func MakeHandlerJSONArray(data DataBase) http.HandlerFunc {
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
-		err = data.GetJSONArray(body)
+		resp, err := data.GetJSONArray(body)
 		if err != nil {
 			if err.Error() == "wrong hash" {
 				rw.WriteHeader(http.StatusBadRequest)
@@ -100,7 +100,7 @@ func MakeHandlerJSONArray(data DataBase) http.HandlerFunc {
 				rw.WriteHeader(http.StatusNotFound)
 			}
 		}
-		rw.Write(nil)
+		rw.Write(resp)
 	}
 }
 
