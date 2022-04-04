@@ -9,7 +9,10 @@ import (
 	"net/http"
 	"path"
 	"runtime"
+	"sync"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/nikolaevs92/Practicum/internal/datastorage"
 )
@@ -30,9 +33,13 @@ const (
 type CollectorAgent struct {
 	cfg Config
 
-	stats       runtime.MemStats
-	PollCount   uint64
-	RandomValue float64
+	stats          runtime.MemStats
+	TotalMemory    uint64
+	FreeMemory     uint64
+	CPUutilization map[string]float64
+	PollCount      uint64
+	RandomValue    float64
+	mu             sync.RWMutex
 }
 
 func New(config Config) *CollectorAgent {
@@ -42,9 +49,20 @@ func New(config Config) *CollectorAgent {
 }
 
 func (collector *CollectorAgent) Collect(t time.Time) {
+	collector.mu.Lock()
+	defer collector.mu.Unlock()
+
 	log.Println("Start collect stat")
 
 	runtime.ReadMemStats(&collector.stats)
+
+	v, _ := mem.VirtualMemory()
+	collector.TotalMemory = v.Total
+	collector.FreeMemory = v.Free
+	for i := 1; i <= runtime.NumCPU(); i++ {
+		collector.CPUutilization[fmt.Sprintf("CPUutilization%d", i)] = rand.Float64()
+	}
+
 	collector.RandomValue = rand.Float64()
 	collector.PollCount++
 
@@ -100,6 +118,9 @@ func (collector *CollectorAgent) PostOneCounterStat(metricName string, metricVal
 }
 
 func (collector *CollectorAgent) Report(t time.Time) {
+	collector.mu.RLock()
+	defer collector.mu.RUnlock()
+
 	go collector.PostOneGaugeStat("Alloc", float64(collector.stats.Alloc))
 	go collector.PostOneGaugeStat("TotalAlloc", float64(collector.stats.TotalAlloc))
 	go collector.PostOneGaugeStat("Frees", float64(collector.stats.Frees))
@@ -129,6 +150,13 @@ func (collector *CollectorAgent) Report(t time.Time) {
 	go collector.PostOneGaugeStat("StackSys", float64(collector.stats.StackSys))
 	go collector.PostOneGaugeStat("Sys", float64(collector.stats.Sys))
 
+	go collector.PostOneCounterStat("FreeMemory", collector.FreeMemory)
+	go collector.PostOneCounterStat("TotalMemory", collector.TotalMemory)
+	for i := 1; i <= runtime.NumCPU(); i++ {
+		metricName := fmt.Sprintf("CPUutilization%d", i)
+		collector.PostOneGaugeStat(metricName, collector.CPUutilization[metricName])
+	}
+
 	go collector.PostOneGaugeStat("RandomValue", float64(collector.RandomValue))
 
 	go collector.PostOneCounterStat("PollCount", collector.PollCount)
@@ -143,9 +171,9 @@ func (collector *CollectorAgent) Run(end context.Context) error {
 	for {
 		select {
 		case t := <-collectTimer.C:
-			collector.Collect(t)
+			go collector.Collect(t)
 		case t := <-reportTimer.C:
-			collector.Report(t)
+			go collector.Report(t)
 		case <-end.Done():
 			log.Println("Collector stoped")
 			return nil
