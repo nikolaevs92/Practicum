@@ -17,6 +17,9 @@ const (
 	DefaultStoreFile      = "/tmp/devops-metrics-db.json"
 	DefaultRestore        = true
 	DefaultServer         = "127.0.0.1:8080"
+	DefaultKey            = ""
+	DefaultDataBaseDSN    = ""
+	DefaultDataBaseType   = "postgres"
 )
 
 const (
@@ -27,6 +30,9 @@ const (
 	envRestore        = "RESTORE"
 	envReportRetries  = "REPORT_RETRIES"
 	envServer         = "ADDRESS"
+	envKey            = "KEY"
+	envDataBaseDSN    = "DATABASE_DSN"
+	envDataBaseType   = "DATABASE_TYPE"
 )
 
 type Config struct {

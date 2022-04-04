@@ -97,7 +97,8 @@ func TestStatHandler(t *testing.T) {
 	}()
 
 	cfg := config.LoadConfig()
-	storage := datastorage.New(cfg.Server.StorageConfig)
+	cfg.Server.StoreFile = "./.data"
+	storage := datastorage.NewFileStorage(cfg.Server.StorageConfig)
 	storage.Init()
 	go storage.RunReciver(ctx)
 

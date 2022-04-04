@@ -1,6 +1,7 @@
 package server
 
 import (
+	"compress/gzip"
 	"context"
 	"fmt"
 	"html/template"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -23,11 +25,46 @@ type DataBase interface {
 	Init()
 	RunReciver(context.Context)
 	GetJSONUpdate([]byte) error
+	GetJSONArray([]byte) ([]byte, error)
 	GetJSONValue([]byte) ([]byte, error)
+	Ping() bool
+}
+
+type gzipWriter struct {
+	http.ResponseWriter
+	Writer io.Writer
+}
+
+func (w gzipWriter) Write(b []byte) (int, error) {
+	// w.Writer будет отвечать за gzip-сжатие, поэтому пишем в него
+	return w.Writer.Write(b)
+}
+
+func gzipHandle(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// проверяем, что клиент поддерживает gzip-сжатие
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// создаём gzip.Writer поверх текущего w
+		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		if err != nil {
+			io.WriteString(w, err.Error())
+			return
+		}
+		defer gz.Close()
+
+		w.Header().Set("Content-Encoding", "gzip")
+		// передаём обработчику страницы переменную типа gzipWriter для вывода данных
+		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
+	})
 }
 
 func MakeHandlerJSONUpdate(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
+		log.Println("get json update")
 		rw.Header().Set("content-type", "application/json")
 		body, err := io.ReadAll(req.Body)
 		if err != nil {
@@ -36,9 +73,34 @@ func MakeHandlerJSONUpdate(data DataBase) http.HandlerFunc {
 		}
 		err = data.GetJSONUpdate(body)
 		if err != nil {
-			rw.WriteHeader(http.StatusNotFound)
+			if err.Error() == "wrong hash" {
+				rw.WriteHeader(http.StatusBadRequest)
+			} else {
+				rw.WriteHeader(http.StatusNotFound)
+			}
 		}
 		rw.Write(body)
+	}
+}
+
+func MakeHandlerJSONArray(data DataBase) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		log.Println("get json update")
+		rw.Header().Set("content-type", "application/json")
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+		resp, err := data.GetJSONArray(body)
+		if err != nil {
+			if err.Error() == "wrong hash" {
+				rw.WriteHeader(http.StatusBadRequest)
+			} else {
+				rw.WriteHeader(http.StatusNotFound)
+			}
+		}
+		rw.Write(resp)
 	}
 }
 
@@ -52,7 +114,11 @@ func MakeHandlerJSONValue(data DataBase) http.HandlerFunc {
 		}
 		respBody, err := data.GetJSONValue(body)
 		if err != nil {
-			rw.WriteHeader(http.StatusNotFound)
+			if err.Error() == "wrong hash" {
+				rw.WriteHeader(http.StatusBadRequest)
+			} else {
+				rw.WriteHeader(http.StatusNotFound)
+			}
 		}
 		rw.Write(respBody)
 	}
@@ -60,6 +126,7 @@ func MakeHandlerJSONValue(data DataBase) http.HandlerFunc {
 
 func MakeHandlerUpdate(data DataBase) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
+		log.Println("get update")
 		rw.Header().Set("content-type", "text/plain; charset=utf-8")
 		metricType := chi.URLParam(req, "metricType")
 		metricName := chi.URLParam(req, "metricName")
@@ -83,6 +150,7 @@ func MakeHandlerUpdate(data DataBase) http.HandlerFunc {
 		if err == nil {
 			rw.WriteHeader(http.StatusOK)
 		} else {
+			log.Println(err)
 			rw.WriteHeader(http.StatusBadRequest)
 		}
 		rw.Write(body)
@@ -170,8 +238,20 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(gzipHandle)
 
 	r.Get("/", MakeGetHomeHandler(dataStorage))
+	r.Get("/ping", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("content-type", "text/plain; charset=utf-8")
+		ok := dataStorage.Ping()
+		log.Println("is ping", ok)
+		if ok {
+			rw.WriteHeader(http.StatusOK)
+		} else {
+			rw.WriteHeader(http.StatusInternalServerError)
+		}
+		rw.Write(nil)
+	})
 
 	r.Route("/value", func(r chi.Router) {
 		r.Get("/gauge/{metricName}", MakeHandleGaugeValue(dataStorage))
@@ -194,6 +274,10 @@ func MakeRouter(dataStorage DataBase) chi.Router {
 			rw.WriteHeader(http.StatusBadRequest)
 			rw.Write(nil)
 		})
+	})
+
+	r.Route("/updates", func(r chi.Router) {
+		r.Post("/", MakeHandlerJSONArray(dataStorage))
 	})
 
 	r.Route("/update", func(r chi.Router) {
@@ -239,7 +323,11 @@ func (dataServer *DataServer) Init() {
 func New(config Config) *DataServer {
 	server := new(DataServer)
 	server.Server = config.Server
-	server.DataHolder = datastorage.New(config.StorageConfig)
+	if config.DataBaseDSN != "" {
+		server.DataHolder = datastorage.NewSQLStorage(config.StorageConfig)
+	} else {
+		server.DataHolder = datastorage.NewFileStorage(config.StorageConfig)
+	}
 	server.Init()
 	return server
 }

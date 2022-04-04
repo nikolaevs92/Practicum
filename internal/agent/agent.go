@@ -19,6 +19,7 @@ type Config struct {
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 	ReportRetries  int
+	Key            string
 }
 
 const (
@@ -63,6 +64,7 @@ func (collector *CollectorAgent) PostOneStat(metrics datastorage.Metrics) {
 	log.Println(metrics)
 	url := "http://" + path.Join(collector.cfg.Server, "update")
 
+	metrics.Hash, _ = metrics.CalcHash(collector.cfg.Key)
 	body, err := metrics.MarshalJSON()
 	if err != nil {
 		log.Println("Error while marshal " + err.Error())

@@ -8,9 +8,12 @@ import (
 type StorageConfig struct {
 	StoreInterval time.Duration
 	StoreFile     string
+	DataBaseDSN   string
+	DBType        string
 	Restore       bool
 	Store         bool
 	Synchronized  bool
+	Key           string
 }
 
 func (cfg StorageConfig) String() string {

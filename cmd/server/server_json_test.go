@@ -78,6 +78,7 @@ func TestJSONHandler(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cfg := config.LoadConfig()
+	cfg.Server.StoreFile = "./.data"
 	go func() {
 		<-cancelChan
 		cancel()
@@ -85,7 +86,7 @@ func TestJSONHandler(t *testing.T) {
 
 	for _, tt := range tests {
 
-		storage := datastorage.New(cfg.Server.StorageConfig)
+		storage := datastorage.NewFileStorage(cfg.Server.StorageConfig)
 		storage.Init()
 		go storage.RunReciver(ctx)
 
