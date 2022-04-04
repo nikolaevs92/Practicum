@@ -45,6 +45,7 @@ type CollectorAgent struct {
 func New(config Config) *CollectorAgent {
 	collector := new(CollectorAgent)
 	collector.cfg = config
+	collector.CPUutilization = make(map[string]float64)
 	return collector
 }
 
