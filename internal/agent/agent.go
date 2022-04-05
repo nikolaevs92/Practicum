@@ -57,9 +57,11 @@ func (collector *CollectorAgent) Collect(t time.Time) {
 
 	runtime.ReadMemStats(&collector.stats)
 
-	v, _ := mem.VirtualMemory()
-	collector.TotalMemory = v.Total
-	collector.FreeMemory = v.Free
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		collector.TotalMemory = v.Total
+		collector.FreeMemory = v.Free
+	}
 	for i := 1; i <= runtime.NumCPU(); i++ {
 		collector.CPUutilization[fmt.Sprintf("CPUutilization%d", i)] = rand.Float64()
 	}
