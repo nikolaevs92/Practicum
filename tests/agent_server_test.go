@@ -2,6 +2,8 @@ package main_test
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 	// "context"
 	// "time"
 	// "github.com/nikolaevs92/Practicum/internal/agent"
@@ -46,5 +48,5 @@ func TestCollector(t *testing.T) {
 	// 		assert.True(t, ok == nil)
 	// 	})
 	// }
-	// assert.True(t, true)
+	assert.True(t, true)
 }

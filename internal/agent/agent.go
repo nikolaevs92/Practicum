@@ -3,13 +3,18 @@ package agent
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
 	"path"
 	"runtime"
+	"sync"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/nikolaevs92/Practicum/internal/datastorage"
 )
@@ -30,21 +35,46 @@ const (
 type CollectorAgent struct {
 	cfg Config
 
-	stats       runtime.MemStats
-	PollCount   uint64
-	RandomValue float64
+	stats          runtime.MemStats
+	TotalMemory    uint64
+	FreeMemory     uint64
+	CPUutilization map[string]float64
+	PollCount      uint64
+	RandomValue    float64
+	mu             sync.RWMutex
 }
 
 func New(config Config) *CollectorAgent {
 	collector := new(CollectorAgent)
 	collector.cfg = config
+	collector.CPUutilization = make(map[string]float64)
 	return collector
 }
 
 func (collector *CollectorAgent) Collect(t time.Time) {
+	collector.mu.Lock()
+	defer collector.mu.Unlock()
+
 	log.Println("Start collect stat")
 
 	runtime.ReadMemStats(&collector.stats)
+
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		collector.TotalMemory = v.Total
+		collector.FreeMemory = v.Free
+	}
+	c, err := cpu.Percent(time.Millisecond, true)
+	if err != nil {
+		for i := 1; i <= runtime.NumCPU(); i++ {
+			collector.CPUutilization[fmt.Sprintf("CPUutilization%d", i)] = c[i]
+		}
+	} else {
+		for i := 1; i <= runtime.NumCPU(); i++ {
+			collector.CPUutilization[fmt.Sprintf("CPUutilization%d", i)] = 0
+		}
+	}
+
 	collector.RandomValue = rand.Float64()
 	collector.PollCount++
 
@@ -99,39 +129,210 @@ func (collector *CollectorAgent) PostOneCounterStat(metricName string, metricVal
 	})
 }
 
+func (collector *CollectorAgent) getMetrcisSlice() []datastorage.Metrics {
+	collector.mu.RLock()
+	defer collector.mu.RUnlock()
+
+	metrics := []datastorage.Metrics{
+		datastorage.Metrics{
+			ID:    "Alloc",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.Alloc),
+		},
+		datastorage.Metrics{
+			ID:    "TotalAlloc",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.TotalAlloc),
+		},
+		datastorage.Metrics{
+			ID:    "Frees",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.Frees),
+		},
+		datastorage.Metrics{
+			ID:    "BuckHashSys",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.BuckHashSys),
+		},
+		datastorage.Metrics{
+			ID:    "GCCPUFraction",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.GCCPUFraction),
+		},
+		datastorage.Metrics{
+			ID:    "GCSys",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.GCSys),
+		},
+		datastorage.Metrics{
+			ID:    "HeapAlloc",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.HeapAlloc),
+		},
+		datastorage.Metrics{
+			ID:    "HeapIdle",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.HeapIdle),
+		},
+		datastorage.Metrics{
+			ID:    "HeapInuse",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.HeapInuse),
+		},
+		datastorage.Metrics{
+			ID:    "HeapObjects",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.HeapObjects),
+		},
+		datastorage.Metrics{
+			ID:    "HeapReleased",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.HeapReleased),
+		},
+		datastorage.Metrics{
+			ID:    "HeapSys",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.HeapSys),
+		},
+		datastorage.Metrics{
+			ID:    "LastGC",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.LastGC),
+		},
+		datastorage.Metrics{
+			ID:    "Lookups",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.Lookups),
+		},
+		datastorage.Metrics{
+			ID:    "MCacheInuse",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.MCacheInuse),
+		},
+		datastorage.Metrics{
+			ID:    "MCacheSys",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.MCacheSys),
+		},
+		datastorage.Metrics{
+			ID:    "MSpanInuse",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.MSpanInuse),
+		},
+		datastorage.Metrics{
+			ID:    "MSpanSys",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.MSpanSys),
+		},
+		datastorage.Metrics{
+			ID:    "Mallocs",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.Mallocs),
+		},
+		datastorage.Metrics{
+			ID:    "NextGC",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.NextGC),
+		},
+		datastorage.Metrics{
+			ID:    "NumForcedGC",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.NumForcedGC),
+		},
+		datastorage.Metrics{
+			ID:    "NumGC",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.NumGC),
+		},
+		datastorage.Metrics{
+			ID:    "OtherSys",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.OtherSys),
+		},
+		datastorage.Metrics{
+			ID:    "PauseTotalNs",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.PauseTotalNs),
+		},
+		datastorage.Metrics{
+			ID:    "StackInuse",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.StackInuse),
+		},
+		datastorage.Metrics{
+			ID:    "StackSys",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.StackSys),
+		},
+		datastorage.Metrics{
+			ID:    "Sys",
+			MType: gaugeTypeName,
+			Value: float64(collector.stats.Sys),
+		},
+
+		datastorage.Metrics{
+			ID:    "RandomValue",
+			MType: gaugeTypeName,
+			Value: float64(collector.RandomValue),
+		},
+
+		datastorage.Metrics{
+			ID:    "FreeMemory",
+			MType: counterTypeName,
+			Delta: collector.FreeMemory,
+		},
+		datastorage.Metrics{
+			ID:    "TotalMemory",
+			MType: counterTypeName,
+			Delta: collector.TotalMemory,
+		},
+		datastorage.Metrics{
+			ID:    "PollCount",
+			MType: counterTypeName,
+			Delta: collector.PollCount,
+		},
+	}
+
+	for i := 1; i <= runtime.NumCPU(); i++ {
+		metricName := fmt.Sprintf("CPUutilization%d", i)
+
+		metrics = append(metrics, datastorage.Metrics{
+			ID:    metricName,
+			MType: gaugeTypeName,
+			Value: collector.CPUutilization[metricName],
+		})
+	}
+
+	return metrics
+}
+
 func (collector *CollectorAgent) Report(t time.Time) {
-	go collector.PostOneGaugeStat("Alloc", float64(collector.stats.Alloc))
-	go collector.PostOneGaugeStat("TotalAlloc", float64(collector.stats.TotalAlloc))
-	go collector.PostOneGaugeStat("Frees", float64(collector.stats.Frees))
-	go collector.PostOneGaugeStat("BuckHashSys", float64(collector.stats.BuckHashSys))
-	go collector.PostOneGaugeStat("Frees", float64(collector.stats.Frees))
-	go collector.PostOneGaugeStat("GCCPUFraction", float64(collector.stats.GCCPUFraction))
-	go collector.PostOneGaugeStat("GCSys", float64(collector.stats.GCSys))
-	go collector.PostOneGaugeStat("HeapAlloc", float64(collector.stats.HeapAlloc))
-	go collector.PostOneGaugeStat("HeapIdle", float64(collector.stats.HeapIdle))
-	go collector.PostOneGaugeStat("HeapInuse", float64(collector.stats.HeapInuse))
-	go collector.PostOneGaugeStat("HeapObjects", float64(collector.stats.HeapObjects))
-	go collector.PostOneGaugeStat("HeapReleased", float64(collector.stats.HeapReleased))
-	go collector.PostOneGaugeStat("HeapSys", float64(collector.stats.HeapSys))
-	go collector.PostOneGaugeStat("LastGC", float64(collector.stats.LastGC))
-	go collector.PostOneGaugeStat("Lookups", float64(collector.stats.Lookups))
-	go collector.PostOneGaugeStat("MCacheInuse", float64(collector.stats.MCacheInuse))
-	go collector.PostOneGaugeStat("MCacheSys", float64(collector.stats.MCacheSys))
-	go collector.PostOneGaugeStat("MSpanInuse", float64(collector.stats.MSpanInuse))
-	go collector.PostOneGaugeStat("MSpanSys", float64(collector.stats.MSpanSys))
-	go collector.PostOneGaugeStat("Mallocs", float64(collector.stats.Mallocs))
-	go collector.PostOneGaugeStat("NextGC", float64(collector.stats.NextGC))
-	go collector.PostOneGaugeStat("NumForcedGC", float64(collector.stats.NumForcedGC))
-	go collector.PostOneGaugeStat("NumGC", float64(collector.stats.NumGC))
-	go collector.PostOneGaugeStat("OtherSys", float64(collector.stats.OtherSys))
-	go collector.PostOneGaugeStat("PauseTotalNs", float64(collector.stats.PauseTotalNs))
-	go collector.PostOneGaugeStat("StackInuse", float64(collector.stats.StackInuse))
-	go collector.PostOneGaugeStat("StackSys", float64(collector.stats.StackSys))
-	go collector.PostOneGaugeStat("Sys", float64(collector.stats.Sys))
+	metrics := collector.getMetrcisSlice()
 
-	go collector.PostOneGaugeStat("RandomValue", float64(collector.RandomValue))
+	log.Println("Post batch stats to " + collector.cfg.Server)
+	log.Println(metrics)
+	url := "http://" + path.Join(collector.cfg.Server, "updates")
 
-	go collector.PostOneCounterStat("PollCount", collector.PollCount)
+	for i := range metrics {
+		metrics[i].Hash, _ = metrics[i].CalcHash(collector.cfg.Key)
+	}
+
+	body, err := json.Marshal(metrics)
+	if err != nil {
+		log.Println("Error while marshal " + err.Error())
+		return
+	}
+	resp, err := collector.PostWithRetrues(url, "application/json", body)
+	if err != nil {
+		log.Println("Post error" + err.Error())
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf(url, " status code ", resp.StatusCode)
+	}
+	log.Println("Post batch stats: succesed")
 }
 
 func (collector *CollectorAgent) Run(end context.Context) error {
@@ -143,9 +344,9 @@ func (collector *CollectorAgent) Run(end context.Context) error {
 	for {
 		select {
 		case t := <-collectTimer.C:
-			collector.Collect(t)
+			go collector.Collect(t)
 		case t := <-reportTimer.C:
-			collector.Report(t)
+			go collector.Report(t)
 		case <-end.Done():
 			log.Println("Collector stoped")
 			return nil
